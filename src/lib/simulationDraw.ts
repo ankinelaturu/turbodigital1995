@@ -6,7 +6,8 @@
  */
 import type { CircuitLayout, Point } from './types';
 import { COLORS, LAYOUT, OUTPUT_NAME } from './types';
-import { drawCompletedStroke, drawCRTOverlay, drawGateHaloStroke } from './canvasDraw';
+import { drawCompletedStroke, drawGateHaloStroke } from './canvasDraw';
+import { paintWithViewport, type CanvasViewport } from './canvasViewport';
 import { gateStrokes, partialPolyline } from './drawQueue';
 import { segmentKey, type SimulationState } from './simulate';
 
@@ -286,16 +287,19 @@ export function paintSimulation(
   layout: CircuitLayout,
   sim: SimulationState,
   flowAnim: Map<string, FlowEntry>,
+  viewport: CanvasViewport,
 ): void {
-  ctx.fillStyle = COLORS.bg;
-  ctx.fillRect(0, 0, layout.width, layout.height);
-
-  drawInputLabels(ctx, layout);
-  drawRails(ctx, layout, sim);
-  drawSwitchConnectors(ctx, layout, sim);
-  drawWires(ctx, layout, sim, flowAnim);
-  drawGates(ctx, layout);
-  drawOutput(ctx, layout, sim.output);
-  drawCRTOverlay(ctx, layout.width, layout.height);
-  drawActiveGateHalos(ctx, layout, sim);
+  paintWithViewport(
+    ctx,
+    viewport,
+    () => {
+      drawInputLabels(ctx, layout);
+      drawRails(ctx, layout, sim);
+      drawSwitchConnectors(ctx, layout, sim);
+      drawWires(ctx, layout, sim, flowAnim);
+      drawGates(ctx, layout);
+      drawOutput(ctx, layout, sim.output);
+    },
+    () => drawActiveGateHalos(ctx, layout, sim),
+  );
 }

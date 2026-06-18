@@ -9,12 +9,18 @@
  * The draw effect intentionally depends only on `[layout, drawKey]` — callbacks
  * are held in refs so completing the animation does not restart the pen draw.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { AST } from '../lib/parse';
 import type { CircuitLayout, SourceSpan } from '../lib/types';
-import { COLORS, SIM_FLOW_MS } from '../lib/types';
+import { SIM_FLOW_MS } from '../lib/types';
 import { buildDrawQueue, type Stroke } from '../lib/drawQueue';
-import { drawCompletedStroke, drawCRTOverlay, drawStroke } from '../lib/canvasDraw';
+import { drawCompletedStroke, drawStroke } from '../lib/canvasDraw';
+import {
+  computeViewport,
+  layoutToScreen,
+  paintWithViewport,
+  type CanvasViewport,
+} from '../lib/canvasViewport';
 import { gateHitBounds } from '../lib/gateGeometry';
 import {
   computeSimulation,
@@ -59,9 +65,10 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
   const simRef = useRef<SimulationState | null>(null);
   const prevSegmentsRef = useRef<Set<string>>(new Set());
   const completeRef = useRef(false);
+  const viewportRef = useRef<CanvasViewport | null>(null);
 
   const [complete, setComplete] = useState(false);
-  const [displayScale, setDisplayScale] = useState(1);
+  const [viewport, setViewport] = useState<CanvasViewport | null>(null);
   const [gateHover, setGateHover] = useState<GateHover | null>(null);
   const [inputs, setInputs] = useState<Record<string, boolean>>({});
   const [simAnimating, setSimAnimating] = useState(false);
@@ -69,32 +76,31 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
 
   const paintPen = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !layout) return;
+    const vp = viewportRef.current;
+    if (!canvas || !layout || !vp) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.fillStyle = COLORS.bg;
-    ctx.fillRect(0, 0, layout.width, layout.height);
-
-    const states = strokesRef.current;
-    for (let i = 0; i < states.length; i++) {
-      const s = states[i];
-      if (s.done) {
-        drawCompletedStroke(ctx, s.stroke);
-      } else if (i === currentIndexRef.current) {
-        drawStroke(ctx, s.stroke, s.progress);
+    paintWithViewport(ctx, vp, () => {
+      const states = strokesRef.current;
+      for (let i = 0; i < states.length; i++) {
+        const s = states[i];
+        if (s.done) {
+          drawCompletedStroke(ctx, s.stroke);
+        } else if (i === currentIndexRef.current) {
+          drawStroke(ctx, s.stroke, s.progress);
+        }
       }
-    }
-
-    drawCRTOverlay(ctx, layout.width, layout.height);
+    });
   }, [layout]);
 
   const paintSim = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !layout || !simRef.current) return;
+    const vp = viewportRef.current;
+    if (!canvas || !layout || !simRef.current || !vp) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    paintSimulation(ctx, layout, simRef.current, flowAnimRef.current);
+    paintSimulation(ctx, layout, simRef.current, flowAnimRef.current, vp);
   }, [layout]);
 
   const initSimulation = useCallback(() => {
@@ -119,6 +125,35 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
   const onGateHoverRef = useRef(onGateHover);
   onGateHoverRef.current = onGateHover;
 
+  const applySize = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container || !layout) return;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    if (cw <= 0 || ch <= 0) {
+      requestAnimationFrame(() => applySize());
+      return;
+    }
+    const vp = computeViewport(cw, ch, layout.width, layout.height);
+    canvas.width = Math.max(1, Math.floor(cw));
+    canvas.height = Math.max(1, Math.floor(ch));
+    viewportRef.current = vp;
+    setViewport(vp);
+    if (completeRef.current) paintSimRef.current();
+    else if (strokesRef.current.length > 0) paintPenRef.current();
+  }, [layout]);
+
+  useLayoutEffect(() => {
+    if (!layout) return;
+    applySize();
+    const container = containerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(() => applySize());
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [layout, drawKey, applySize]);
+
   useEffect(() => {
     if (!layout) return;
 
@@ -132,27 +167,6 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
     setSimAnimating(false);
     flowAnimRef.current = new Map();
     onGateHoverRef.current?.(null);
-
-    const applySize = () => {
-      const canvas = canvasRef.current;
-      const container = containerRef.current;
-      if (!canvas || !container) return;
-      const cw = container.clientWidth;
-      const ch = container.clientHeight;
-      const scale = Math.min(cw / layout.width, ch / layout.height);
-      canvas.width = Math.floor(layout.width * scale);
-      canvas.height = Math.floor(layout.height * scale);
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.setTransform(scale, 0, 0, scale, 0, 0);
-      setDisplayScale(scale);
-      if (completeRef.current) paintSimRef.current();
-      else paintPenRef.current();
-    };
-
-    applySize();
-
-    const ro = new ResizeObserver(applySize);
-    if (containerRef.current) ro.observe(containerRef.current);
 
     const tick = (now: number) => {
       const idx = currentIndexRef.current;
@@ -186,7 +200,6 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
     return () => {
       cancelAnimationFrame(animRef.current);
       cancelAnimationFrame(simAnimRef.current);
-      ro.disconnect();
     };
     // Only restart pen draw when layout or drawKey changes — not when simulation completes.
   }, [layout, drawKey]);
@@ -275,34 +288,32 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
     onGateHover?.(null);
   }, [onGateHover]);
 
-  const stageWidth = layout ? layout.width * displayScale : 0;
-  const stageHeight = layout ? layout.height * displayScale : 0;
   const lastSwitch = layout?.switches[layout.switches.length - 1];
-  const switchHintLeft = lastSwitch ? lastSwitch.x * displayScale + 26 : 0;
-  const switchHintTop = lastSwitch ? lastSwitch.y * displayScale : 0;
+  const switchHintPos =
+    viewport && lastSwitch ? layoutToScreen(viewport, lastSwitch.x, lastSwitch.y) : null;
 
   return (
     <div className="circuit-canvas-wrap" ref={containerRef}>
       {layout && (
-        <div
-          className="circuit-canvas-stage"
-          style={{ width: stageWidth, height: stageHeight }}
-        >
+        <div className="circuit-canvas-stage">
           <canvas ref={canvasRef} className="circuit-canvas" />
+          {viewport && (
+            <>
           <div className="gate-hit-layer">
             {complete &&
               layout.gates.map((gate) => {
                 const bounds = gateHitBounds(gate);
+                const topLeft = layoutToScreen(viewport, bounds.x, bounds.y);
                 return (
                   <button
                     key={gate.id}
                     type="button"
                     className="gate-hit-target"
                     style={{
-                      left: bounds.x * displayScale,
-                      top: bounds.y * displayScale,
-                      width: bounds.w * displayScale,
-                      height: bounds.h * displayScale,
+                      left: topLeft.x,
+                      top: topLeft.y,
+                      width: bounds.w * viewport.scale,
+                      height: bounds.h * viewport.scale,
                     }}
                     aria-label={`${gate.type}: ${gate.expression}`}
                     onPointerEnter={(e) => showGateTooltip(gate, e.clientX, e.clientY)}
@@ -316,14 +327,15 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
             <div className="switch-layer">
               {layout.switches.map((sw) => {
                 const on = inputs[sw.name] ?? false;
+                const pos = layoutToScreen(viewport, sw.x, sw.y);
                 return (
                   <button
                     key={sw.name}
                     type="button"
                     className={`input-switch ${on ? 'on' : 'off'}`}
                     style={{
-                      left: sw.x * displayScale,
-                      top: sw.y * displayScale,
+                      left: pos.x,
+                      top: pos.y,
                     }}
                     disabled={simAnimating}
                     aria-label={`Input ${sw.name}: ${on ? 'on' : 'off'}`}
@@ -336,15 +348,17 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
                   </button>
                 );
               })}
-              {complete && lastSwitch && (
+              {lastSwitch && switchHintPos && (
                 <p
                   className="canvas-status-inline"
-                  style={{ left: switchHintLeft, top: switchHintTop }}
+                  style={{ left: switchHintPos.x + 26, top: switchHintPos.y }}
                 >
                   {simAnimating ? 'Current flowing…' : 'Toggle inputs to simulate'}
                 </p>
               )}
             </div>
+          )}
+            </>
           )}
         </div>
       )}
