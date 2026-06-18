@@ -1,0 +1,67 @@
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { ExpressionInput } from './components/ExpressionInput';
+import { CircuitCanvas } from './components/CircuitCanvas';
+import { TruthTable } from './components/TruthTable';
+import { parse, ParseError, collectVariables } from './lib/parse';
+import { buildTruthTable } from './lib/evaluate';
+import { buildLayout } from './lib/layout';
+import type { CircuitLayout } from './lib/types';
+import './App.css';
+
+function App() {
+  const [expression, setExpression] = useState("S'·A+S·B");
+  const [error, setError] = useState<string | null>(null);
+  const [layout, setLayout] = useState<CircuitLayout | null>(null);
+  const [drawKey, setDrawKey] = useState(0);
+  const [ast, setAst] = useState<ReturnType<typeof parse> | null>(null);
+
+  const variables = useMemo(() => (ast ? collectVariables(ast) : []), [ast]);
+  const truthRows = useMemo(
+    () => (ast ? buildTruthTable(ast, variables) : []),
+    [ast, variables],
+  );
+
+  const handleDraw = useCallback(() => {
+    try {
+      const parsed = parse(expression);
+      const built = buildLayout(parsed);
+      setAst(parsed);
+      setLayout(built);
+      setDrawKey((k) => k + 1);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof ParseError ? e.message : 'Invalid expression');
+      setLayout(null);
+      setAst(null);
+    }
+  }, [expression]);
+
+  useEffect(() => {
+    handleDraw();
+    // Initial demo draw only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="app">
+      <ExpressionInput
+        value={expression}
+        onChange={setExpression}
+        onDraw={handleDraw}
+        error={error}
+      />
+
+      <main className="main-panels">
+        <CircuitCanvas layout={layout} drawKey={drawKey} />
+        <TruthTable variables={variables} rows={truthRows} />
+      </main>
+
+      <footer className="footer">
+        <span>Phosphor green CRT mode</span>
+        <span>Rails → wires → gates</span>
+      </footer>
+    </div>
+  );
+}
+
+export default App;

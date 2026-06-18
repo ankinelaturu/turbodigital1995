@@ -1,0 +1,70 @@
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export const COLORS = {
+  bg: '#050805',
+  phosphor: '#39ff14',
+  phosphorDim: '#1a8f0a',
+  phosphorGlow: 'rgba(57, 255, 20, 0.35)',
+  label: '#5dff4a',
+};
+
+export const LAYOUT = {
+  marginX: 60,
+  marginY: 70,
+  railSpacing: 90,
+  layerSpacing: 110,
+  gateWidth: 52,
+  gateHeight: 44,
+  notWidth: 28,
+  notHeight: 28,
+  rowStep: 56,
+  wireStub: 18,
+  jumperRadius: 10,
+  labelOffsetY: -28,
+  railTop: 50,
+};
+
+export type GateType = 'NOT' | 'AND' | 'OR';
+
+export interface GateLayout {
+  id: string;
+  type: GateType;
+  x: number;
+  y: number;
+  inputYs: number[];
+  outputX: number;
+  outputY: number;
+}
+
+export interface RailLayout {
+  name: string;
+  x: number;
+  yTop: number;
+  yBottom: number;
+}
+
+export interface WireLayout {
+  id: string;
+  points: Point[];
+  jumpers: { x: number; y: number; railX: number }[];
+}
+
+export interface LabelLayout {
+  text: string;
+  x: number;
+  y: number;
+}
+
+export interface CircuitLayout {
+  variables: string[];
+  rails: RailLayout[];
+  gates: GateLayout[];
+  wires: WireLayout[];
+  labels: LabelLayout[];
+  output: Point;
+  width: number;
+  height: number;
+}

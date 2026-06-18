@@ -1,0 +1,251 @@
+:root {
+  --bg: #050805;
+  --bg-panel: #0a100a;
+  --phosphor: #39ff14;
+  --phosphor-dim: #1a8f0a;
+  --phosphor-muted: #5dff4a;
+  --border: #1a3a1a;
+  --text-dim: #6a9a6a;
+  --error: #ff4444;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  background: var(--bg);
+  color: var(--phosphor-muted);
+  line-height: 1.5;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.panel-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--phosphor);
+  text-shadow: 0 0 12px rgba(57, 255, 20, 0.4);
+  letter-spacing: 0.04em;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.input-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.expr-field {
+  flex: 1;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--phosphor);
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 4px;
+  outline: none;
+  box-shadow: inset 0 0 20px rgba(0, 40, 0, 0.3);
+}
+
+.expr-field:focus {
+  border-color: var(--phosphor-dim);
+  box-shadow: 0 0 8px rgba(57, 255, 20, 0.2), inset 0 0 20px rgba(0, 40, 0, 0.3);
+}
+
+.draw-btn {
+  background: transparent;
+  border: 1px solid var(--phosphor-dim);
+  color: var(--phosphor);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.65rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.draw-btn:hover {
+  background: rgba(57, 255, 20, 0.08);
+  box-shadow: 0 0 12px rgba(57, 255, 20, 0.25);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.chips-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.chip {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--phosphor-muted);
+  font-family: inherit;
+  font-size: 0.75rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.chip:hover {
+  border-color: var(--phosphor-dim);
+  color: var(--phosphor);
+}
+
+.syntax-hint {
+  margin: 0.65rem 0 0;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.error-msg {
+  margin: 0.5rem 0 0;
+  color: var(--error);
+  font-size: 0.85rem;
+}
+
+.main-panels {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1rem;
+  flex: 1;
+}
+
+@media (max-width: 800px) {
+  .main-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.circuit-canvas-wrap {
+  position: relative;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 360px;
+  overflow: hidden;
+  box-shadow: inset 0 0 40px rgba(0, 30, 0, 0.5);
+}
+
+.circuit-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.canvas-placeholder,
+.canvas-status {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.truth-table {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  box-shadow: inset 0 0 30px rgba(0, 30, 0, 0.4);
+}
+
+.truth-table h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--phosphor);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.truth-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.truth-table th,
+.truth-table td {
+  padding: 0.35rem 0.6rem;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.truth-table th {
+  background: rgba(57, 255, 20, 0.06);
+  color: var(--phosphor);
+  font-weight: 600;
+}
+
+.truth-table td {
+  color: var(--phosphor-muted);
+}
+
+.truth-table .out-one {
+  color: var(--phosphor);
+  font-weight: 600;
+}
+
+.truth-table .out-zero {
+  color: var(--text-dim);
+}
+
+.table-empty {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
