@@ -99,7 +99,7 @@ function drawGateStroke(
     const halos: { width: number; color: string }[] = [
       { width: 3.5, color: COLORS.gateActiveHaloOuter },
       { width: 2.25, color: COLORS.gateActiveHalo },
-      { width: 2.75, color: 'rgba(255, 100, 100, 0.45)' },
+      { width: 3, color: 'rgba(255, 100, 100, 0.45)' },
     ];
     for (const halo of halos) {
       ctx.strokeStyle = halo.color;
