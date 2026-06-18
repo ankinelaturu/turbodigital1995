@@ -10,6 +10,8 @@ export function evaluate(ast: AST, env: Record<string, boolean>): boolean {
       return evaluate(ast.left, env) && evaluate(ast.right, env);
     case 'or':
       return evaluate(ast.left, env) || evaluate(ast.right, env);
+    case 'xor':
+      return evaluate(ast.left, env) !== evaluate(ast.right, env);
   }
 }
 

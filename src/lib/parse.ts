@@ -9,6 +9,7 @@ export type AST =
   | { type: 'var'; name: string; span: SourceSpan }
   | { type: 'not'; child: AST; span: SourceSpan }
   | { type: 'and'; left: AST; right: AST; span: SourceSpan }
+  | { type: 'xor'; left: AST; right: AST; span: SourceSpan }
   | { type: 'or'; left: AST; right: AST; span: SourceSpan };
 
 export class ParseError extends Error {
@@ -22,6 +23,7 @@ type Token =
   | { kind: 'var'; name: string; span: SourceSpan }
   | { kind: 'not'; span: SourceSpan }
   | { kind: 'and'; span: SourceSpan }
+  | { kind: 'xor'; span: SourceSpan }
   | { kind: 'or'; span: SourceSpan }
   | { kind: 'lparen'; span: SourceSpan }
   | { kind: 'rparen'; span: SourceSpan };
@@ -33,10 +35,11 @@ function mergeSpan(a: SourceSpan, b: SourceSpan): SourceSpan {
 function readKeyword(
   input: string,
   i: number,
-): { kind: 'not' | 'and' | 'or'; len: number } | null {
+): { kind: 'not' | 'and' | 'xor' | 'or'; len: number } | null {
   const tail = input.slice(i);
   if (/^NOT\b/i.test(tail)) return { kind: 'not', len: 3 };
   if (/^AND\b/i.test(tail)) return { kind: 'and', len: 3 };
+  if (/^XOR\b/i.test(tail)) return { kind: 'xor', len: 3 };
   if (/^OR\b/i.test(tail)) return { kind: 'or', len: 2 };
   return null;
 }
@@ -79,6 +82,9 @@ function tokenize(input: string): Token[] {
     } else if (ch === '+' || ch === '|') {
       tokens.push({ kind: 'or', span: { start, end: i + 1 } });
       i++;
+    } else if (ch === '^') {
+      tokens.push({ kind: 'xor', span: { start, end: i + 1 } });
+      i++;
     } else if (/[A-Za-z]/.test(ch)) {
       let name = ch.toUpperCase();
       i++;
@@ -111,11 +117,26 @@ export function parse(expr: string): AST {
 }
 
 function parseOr(tokens: Token[]): [AST, Token[]] {
-  let [left, rest] = parseAnd(tokens);
+  let [left, rest] = parseXor(tokens);
   while (rest.length > 0 && rest[0].kind === 'or') {
-    const [right, afterRight] = parseAnd(rest.slice(1));
+    const [right, afterRight] = parseXor(rest.slice(1));
     left = {
       type: 'or',
+      left,
+      right,
+      span: mergeSpan(left.span, right.span),
+    };
+    rest = afterRight;
+  }
+  return [left, rest];
+}
+
+function parseXor(tokens: Token[]): [AST, Token[]] {
+  let [left, rest] = parseAnd(tokens);
+  while (rest.length > 0 && rest[0].kind === 'xor') {
+    const [right, afterRight] = parseAnd(rest.slice(1));
+    left = {
+      type: 'xor',
       left,
       right,
       span: mergeSpan(left.span, right.span),
@@ -212,8 +233,11 @@ export function collectVariables(ast: AST): string[] {
   return [...set].sort();
 }
 
-/** Display string for tooltips (middle-dot AND, + OR, postfix NOT). */
-export function formatExpression(ast: AST, parent?: 'and' | 'or'): string {
+/** Display string for tooltips (middle-dot AND, ^ XOR, + OR, postfix NOT). */
+export function formatExpression(
+  ast: AST,
+  parent?: 'and' | 'xor' | 'or',
+): string {
   switch (ast.type) {
     case 'var':
       return ast.name;
@@ -222,11 +246,15 @@ export function formatExpression(ast: AST, parent?: 'and' | 'or'): string {
       return `(${formatExpression(ast.child)})'`;
     case 'and': {
       const text = `${formatExpression(ast.left, 'and')}·${formatExpression(ast.right, 'and')}`;
-      return parent === 'or' ? `(${text})` : text;
+      return parent === 'or' || parent === 'xor' ? `(${text})` : text;
+    }
+    case 'xor': {
+      const text = `${formatExpression(ast.left, 'xor')}^${formatExpression(ast.right, 'xor')}`;
+      return parent === 'or' || parent === 'and' ? `(${text})` : text;
     }
     case 'or': {
       const text = `${formatExpression(ast.left, 'or')}+${formatExpression(ast.right, 'or')}`;
-      return parent === 'and' ? `(${text})` : text;
+      return parent === 'and' || parent === 'xor' ? `(${text})` : text;
     }
   }
 }
@@ -240,6 +268,7 @@ function walk(ast: AST, set: Set<string>): void {
       walk(ast.child, set);
       break;
     case 'and':
+    case 'xor':
     case 'or':
       walk(ast.left, set);
       walk(ast.right, set);

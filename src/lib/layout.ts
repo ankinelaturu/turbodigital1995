@@ -164,6 +164,7 @@ function layoutNode(
       };
     }
     case 'and':
+    case 'xor':
     case 'or': {
       const left = layoutNode(ast.left, railColumns, gateZoneStartX, yCursor);
       const right = layoutNode(ast.right, railColumns, gateZoneStartX, yCursor);
@@ -172,7 +173,8 @@ function layoutNode(
       const bodyX = gateColumnX(gateZoneStartX, depth);
       const gateY = (left.point.y + right.point.y) / 2;
       const gateTop = gateY - LAYOUT.gateHeight / 2;
-      const gateType: GateType = ast.type === 'and' ? 'AND' : 'OR';
+      const gateType: GateType =
+        ast.type === 'and' ? 'AND' : ast.type === 'xor' ? 'XOR' : 'OR';
       const pins = buildGatePins(gateType, bodyX, gateTop);
 
       const wires = [...left.wires, ...right.wires];

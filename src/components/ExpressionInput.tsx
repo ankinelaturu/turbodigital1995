@@ -11,7 +11,8 @@ export const PRESETS: PresetExpression[] = [
   { label: 'A·B + C\'', expr: "A·B+C'" },
   { label: '(A·B)+(C\'·D)', expr: "(A·B)+(C'·D)" },
   { label: '2:1 Mux', expr: "S'·A+S·B" },
-  { label: 'XOR', expr: "A·B'+A'·B" },
+  { label: 'XOR', expr: 'A^B' },
+  { label: 'XOR (expanded)', expr: "A·B'+A'·B" },
   { label: 'A+B·C', expr: 'A+B·C' },
   { label: 'Half adder sum', expr: "A·B'+A'·B" },
   { label: 'Half adder carry', expr: 'A·B' },
@@ -99,7 +100,7 @@ export function ExpressionInput({
       </div>
 
       <p className="syntax-hint">
-        Use · for AND, + for OR, ' for NOT. Inputs: A–Y; output is {OUTPUT_NAME}.
+        Use · for AND, ^ for XOR, + for OR, ' for NOT. Inputs: A–Y; output is {OUTPUT_NAME}.
       </p>
     </section>
   );

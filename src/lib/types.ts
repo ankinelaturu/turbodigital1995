@@ -32,6 +32,8 @@ export const LAYOUT = {
   layerSpacing: 110,
   gateWidth: 52,
   gateHeight: 44,
+  /** Horizontal gap between the two left back arcs on XOR gates */
+  xorBackGap: 3,
   notWidth: 28,
   notHeight: 28,
   rowStep: 56,
@@ -50,7 +52,7 @@ export interface SourceSpan {
   end: number;
 }
 
-export type GateType = 'NOT' | 'AND' | 'OR';
+export type GateType = 'NOT' | 'AND' | 'OR' | 'XOR';
 
 export interface GateLayout {
   id: string;

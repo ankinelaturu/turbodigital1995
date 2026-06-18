@@ -1,6 +1,6 @@
 import { LAYOUT, type GateType, type Point } from './types';
 import type { GateLayout } from './types';
-import { orGateBackXAtY } from './bezier';
+import { orGateBackXAtY, xorGateBezierCurves } from './bezier';
 
 /** Short lead length drawn as part of the gate symbol; external wires attach here. */
 export const GATE_PIN_LENGTH = 10;
@@ -73,7 +73,8 @@ export function buildGatePins(
         outputOuter: { x: bodyRight + pin, y: midY },
       };
     }
-    case 'OR': {
+    case 'OR':
+    case 'XOR': {
       const h = LAYOUT.gateHeight;
       const w = LAYOUT.gateWidth;
       const [upper, lower] = dualInputPinYs(bodyY, h);
@@ -118,6 +119,10 @@ export function gateHitBounds(gate: GateLayout): { x: number; y: number; w: numb
     { x: body.x, y: body.y + body.h },
     { x: body.x + body.w, y: body.y + body.h },
   ];
+  if (gate.type === 'XOR') {
+    const curves = xorGateBezierCurves(body.x, body.y, body.w, body.h, LAYOUT.xorBackGap);
+    points.push(...curves.backOuter);
+  }
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
   const pad = 4;

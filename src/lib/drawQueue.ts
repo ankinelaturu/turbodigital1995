@@ -1,6 +1,6 @@
 import type { CircuitLayout, GateLayout, Point, WireLayout } from './types';
 import { DEBUG, DRAW_SPEED, LAYOUT, OUTPUT_NAME } from './types';
-import { orGateBezierCurves } from './bezier';
+import { orGateBezierCurves, xorGateBezierCurves } from './bezier';
 import { buildGatePins, inputPinStrokes } from './gateGeometry';
 
 export type StrokeKind = 'line' | 'arc' | 'polyline' | 'text';
@@ -167,6 +167,46 @@ function gateStrokes(gate: GateLayout): Stroke[] {
         kind: 'polyline',
         phase: 'gate',
         points: curves.back,
+        durationMs: curveDur,
+      });
+      strokes.push({
+        id: sid(),
+        kind: 'polyline',
+        phase: 'gate',
+        points: curves.top,
+        durationMs: curveDur,
+      });
+      strokes.push({
+        id: sid(),
+        kind: 'polyline',
+        phase: 'gate',
+        points: curves.bottom,
+        durationMs: curveDur,
+      });
+      addLineStroke(strokes, pins.outputInner, pins.outputOuter, gateDur * 0.25);
+      break;
+    }
+    case 'XOR': {
+      const curves = xorGateBezierCurves(
+        body.x,
+        body.y,
+        body.w,
+        body.h,
+        LAYOUT.xorBackGap,
+      );
+      const curveDur = animMs(gateDur * 0.85);
+      strokes.push({
+        id: sid(),
+        kind: 'polyline',
+        phase: 'gate',
+        points: curves.backOuter,
+        durationMs: curveDur,
+      });
+      strokes.push({
+        id: sid(),
+        kind: 'polyline',
+        phase: 'gate',
+        points: curves.backInner,
         durationMs: curveDur,
       });
       strokes.push({

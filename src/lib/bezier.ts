@@ -103,3 +103,19 @@ export function orGateBezierCurves(
 
   return { back, top, bottom };
 }
+
+/** XOR: OR body plus a second back arc to the left with a narrow gap. */
+export function xorGateBezierCurves(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  gap: number,
+): { backOuter: Point[]; backInner: Point[]; top: Point[]; bottom: Point[] } {
+  const { back, top, bottom } = orGateBezierCurves(x, y, w, h);
+  const arcWall = 4;
+  const outerX = x - gap - arcWall;
+  const { p0, p1, p2, p3 } = orGateBackControls(outerX, y, w, h);
+  const backOuter = sampleCubicBezier(p0, p1, p2, p3, 32);
+  return { backOuter, backInner: back, top, bottom };
+}
