@@ -3,6 +3,8 @@ import type { CircuitLayout } from '../lib/types';
 import { COLORS } from '../lib/types';
 import { buildDrawQueue, type Stroke } from '../lib/drawQueue';
 import { drawCompletedStroke, drawCRTOverlay, drawStroke } from '../lib/canvasDraw';
+import { gateHitBounds } from '../lib/gateGeometry';
+import { CursorTooltip } from '@/components/ui/tooltip';
 
 interface CircuitCanvasProps {
   layout: CircuitLayout | null;
@@ -15,6 +17,13 @@ interface StrokeState {
   done: boolean;
 }
 
+interface GateHover {
+  type: string;
+  expression: string;
+  x: number;
+  y: number;
+}
+
 export function CircuitCanvas({ layout, drawKey }: CircuitCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,6 +32,8 @@ export function CircuitCanvas({ layout, drawKey }: CircuitCanvasProps) {
   const currentIndexRef = useRef(0);
   const strokeStartRef = useRef(0);
   const [complete, setComplete] = useState(false);
+  const [displayScale, setDisplayScale] = useState(1);
+  const [gateHover, setGateHover] = useState<GateHover | null>(null);
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -54,6 +65,7 @@ export function CircuitCanvas({ layout, drawKey }: CircuitCanvasProps) {
     currentIndexRef.current = 0;
     strokeStartRef.current = performance.now();
     setComplete(false);
+    setGateHover(null);
 
     const applySize = () => {
       const canvas = canvasRef.current;
@@ -65,6 +77,7 @@ export function CircuitCanvas({ layout, drawKey }: CircuitCanvasProps) {
       canvas.height = Math.floor(layout.height * scale);
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      setDisplayScale(scale);
       paint();
     };
 
@@ -106,11 +119,66 @@ export function CircuitCanvas({ layout, drawKey }: CircuitCanvasProps) {
     };
   }, [layout, drawKey, paint]);
 
+  const showGateTooltip = useCallback((gate: { type: string; expression: string }, x: number, y: number) => {
+    setGateHover({ type: gate.type, expression: gate.expression, x, y });
+  }, []);
+
+  const moveGateTooltip = useCallback((x: number, y: number) => {
+    setGateHover((prev) => (prev ? { ...prev, x, y } : null));
+  }, []);
+
+  const hideGateTooltip = useCallback(() => {
+    setGateHover(null);
+  }, []);
+
+  const stageWidth = layout ? layout.width * displayScale : 0;
+  const stageHeight = layout ? layout.height * displayScale : 0;
+
   return (
     <div className="circuit-canvas-wrap" ref={containerRef}>
-      <canvas ref={canvasRef} className="circuit-canvas" />
+      {layout && (
+        <div
+          className="circuit-canvas-stage"
+          style={{ width: stageWidth, height: stageHeight }}
+        >
+          <canvas ref={canvasRef} className="circuit-canvas" />
+          <div className="gate-hit-layer">
+            {layout.gates.map((gate) => {
+              const bounds = gateHitBounds(gate);
+              return (
+                <button
+                  key={gate.id}
+                  type="button"
+                  className="gate-hit-target"
+                  style={{
+                    left: bounds.x * displayScale,
+                    top: bounds.y * displayScale,
+                    width: bounds.w * displayScale,
+                    height: bounds.h * displayScale,
+                  }}
+                  aria-label={`${gate.type}: ${gate.expression}`}
+                  onPointerEnter={(e) => showGateTooltip(gate, e.clientX, e.clientY)}
+                  onPointerMove={(e) => moveGateTooltip(e.clientX, e.clientY)}
+                  onPointerLeave={hideGateTooltip}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {!layout && <canvas ref={canvasRef} className="circuit-canvas" />}
       {!layout && <p className="canvas-placeholder">Enter an expression and click Draw</p>}
       {layout && complete && <p className="canvas-status">Drawing complete</p>}
+
+      <CursorTooltip open={gateHover !== null} x={gateHover?.x ?? 0} y={gateHover?.y ?? 0}>
+        {gateHover && (
+          <>
+            <span className="text-[#5dff4a]">{gateHover.type}</span>
+            <span className="text-[#6a9a6a]"> · </span>
+            {gateHover.expression}
+          </>
+        )}
+      </CursorTooltip>
     </div>
   );
 }

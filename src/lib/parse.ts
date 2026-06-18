@@ -153,6 +153,25 @@ export function collectVariables(ast: AST): string[] {
   return [...set].sort();
 }
 
+/** Display string for tooltips (middle-dot AND, + OR, postfix NOT). */
+export function formatExpression(ast: AST, parent?: 'and' | 'or'): string {
+  switch (ast.type) {
+    case 'var':
+      return ast.name;
+    case 'not':
+      if (ast.child.type === 'var') return `${ast.child.name}'`;
+      return `(${formatExpression(ast.child)})'`;
+    case 'and': {
+      const text = `${formatExpression(ast.left, 'and')}·${formatExpression(ast.right, 'and')}`;
+      return parent === 'or' ? `(${text})` : text;
+    }
+    case 'or': {
+      const text = `${formatExpression(ast.left, 'or')}+${formatExpression(ast.right, 'or')}`;
+      return parent === 'and' ? `(${text})` : text;
+    }
+  }
+}
+
 function walk(ast: AST, set: Set<string>): void {
   switch (ast.type) {
     case 'var':

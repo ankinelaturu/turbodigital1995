@@ -52,6 +52,8 @@ export interface GateLayout {
   inputYs: number[];
   outputX: number;
   outputY: number;
+  /** Boolean sub-expression this gate implements */
+  expression: string;
 }
 
 export interface RailLayout {

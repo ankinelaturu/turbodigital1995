@@ -1,5 +1,5 @@
 import type { AST } from './parse';
-import { collectVariables } from './parse';
+import { collectVariables, formatExpression } from './parse';
 import type {
   CircuitLayout,
   GateLayout,
@@ -146,6 +146,7 @@ function layoutNode(
         inputYs: pins.inputOuter.map((p) => p.y),
         outputX: pins.outputOuter.x,
         outputY: pins.outputOuter.y,
+        expression: formatExpression(ast),
       };
 
       return {
@@ -204,6 +205,7 @@ function layoutNode(
         inputYs: pins.inputOuter.map((p) => p.y),
         outputX: pins.outputOuter.x,
         outputY: pins.outputOuter.y,
+        expression: formatExpression(ast),
       };
 
       return {

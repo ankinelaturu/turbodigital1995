@@ -1,4 +1,5 @@
 import { LAYOUT, type GateType, type Point } from './types';
+import type { GateLayout } from './types';
 import { orGateBackXAtY } from './bezier';
 
 /** Short lead length drawn as part of the gate symbol; external wires attach here. */
@@ -100,4 +101,29 @@ export function inputPinStrokes(pins: GatePins): { outer: Point; inner: Point }[
     outer,
     inner: pins.inputInner[i],
   }));
+}
+
+/** Axis-aligned hover target covering body and pin leads. */
+export function gateHitBounds(gate: GateLayout): { x: number; y: number; w: number; h: number } {
+  const centerY = gate.type === 'NOT' ? gate.outputY : undefined;
+  const pins = buildGatePins(gate.type, gate.x, gate.y, centerY);
+  const { body } = pins;
+  const points: Point[] = [
+    ...pins.inputOuter,
+    ...pins.inputInner,
+    pins.outputInner,
+    pins.outputOuter,
+    { x: body.x, y: body.y },
+    { x: body.x + body.w, y: body.y },
+    { x: body.x, y: body.y + body.h },
+    { x: body.x + body.w, y: body.y + body.h },
+  ];
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const pad = 4;
+  const minX = Math.min(...xs) - pad;
+  const minY = Math.min(...ys) - pad;
+  const maxX = Math.max(...xs) + pad;
+  const maxY = Math.max(...ys) + pad;
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 }
