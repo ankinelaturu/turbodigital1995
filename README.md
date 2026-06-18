@@ -2,6 +2,8 @@
 
 Boolean expression → animated logic circuit diagram with truth table. A modern recreation of a Turbo C / BGI DOS project.
 
+![TurboDigital 1995 circuit view](docs/sshot.png)
+
 **Documentation:** [docs/](./docs/README.md)
 
 ## Run
