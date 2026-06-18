@@ -14,7 +14,7 @@ export const COLORS = {
 export const LAYOUT = {
   marginX: 60,
   marginY: 70,
-  railSpacing: 90,
+  railSpacing: 64,
   layerSpacing: 110,
   gateWidth: 52,
   gateHeight: 44,
@@ -22,6 +22,10 @@ export const LAYOUT = {
   notHeight: 28,
   rowStep: 56,
   wireStub: 18,
+  /** Gap before gate input where wire turns vertical then enters horizontally */
+  gateWireStub: 15,
+  /** Horizontal gap between the rightmost rail and the first gate column */
+  railToGateGap: 50,
   jumperRadius: 10,
   labelOffsetY: -28,
   railTop: 50,
@@ -46,10 +50,14 @@ export interface RailLayout {
   yBottom: number;
 }
 
+export interface WireSegmentLayout {
+  points: [Point, Point];
+  jumpers: { x: number; y: number; railX: number }[];
+}
+
 export interface WireLayout {
   id: string;
-  points: Point[];
-  jumpers: { x: number; y: number; railX: number }[];
+  segments: WireSegmentLayout[];
 }
 
 export interface LabelLayout {

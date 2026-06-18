@@ -6,8 +6,8 @@ Strokes are queued in a fixed sequence to match the original program’s rhythm:
 
 1. **Labels** — variable names above rails
 2. **Rails** — vertical lines top to bottom
-3. **Wires** — horizontal connections
-4. **Jumpers** — semicircular arcs at rail crossings
+3. **Wires** — horizontal connections, split at each rail crossing: segment → jumper arc → segment → …
+4. **Jumpers** — semicircular arcs hop over crossed rails (not drawn on top of a full line)
 5. **Gates** — AND, OR, NOT symbols
 6. **Output** — wire to F and the F label
 

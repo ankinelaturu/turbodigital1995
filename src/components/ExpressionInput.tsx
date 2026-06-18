@@ -4,6 +4,7 @@ export interface PresetExpression {
 }
 
 export const PRESETS: PresetExpression[] = [
+  { label: 'A+B+C', expr: 'A+B+C' },
   { label: 'A·B + C', expr: 'A·B+C' },
   { label: 'A·B + C\'', expr: "A·B+C'" },
   { label: '(A·B)+(C\'·D)', expr: "(A·B)+(C'·D)" },

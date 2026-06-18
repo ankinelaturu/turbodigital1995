@@ -8,6 +8,7 @@ import type {
   Point,
   RailLayout,
   WireLayout,
+  WireSegmentLayout,
 } from './types';
 import { LAYOUT } from './types';
 
@@ -15,6 +16,8 @@ interface NodeResult {
   point: Point;
   gates: GateLayout[];
   wires: WireLayout[];
+  /** Deepest gate layer in this subtree; 0 for a bare variable */
+  depth: number;
 }
 
 let wireId = 0;
@@ -32,38 +35,90 @@ function railX(varIndex: number): number {
   return LAYOUT.marginX + varIndex * LAYOUT.railSpacing;
 }
 
-function makeHorizontalWire(
-  from: Point,
-  toX: number,
+function gateInputX(gateZoneStartX: number, depth: number): number {
+  return gateZoneStartX + (depth - 1) * LAYOUT.layerSpacing;
+}
+
+function gateOutputX(depth: number, type: GateType, gateZoneStartX: number): number {
+  const inputX = gateInputX(gateZoneStartX, depth);
+  if (type === 'AND') {
+    return inputX + LAYOUT.gateHeight;
+  }
+  const tail = type === 'NOT' ? 4 : 8;
+  const width = type === 'NOT' ? LAYOUT.notWidth : LAYOUT.gateWidth;
+  return inputX + width + tail;
+}
+
+function collectRailJumpers(
+  x1: number,
+  x2: number,
+  y: number,
   railColumns: Map<string, number>,
   sourceVar?: string,
-): WireLayout {
-  const y = from.y;
-  const x1 = Math.min(from.x, toX);
-  const x2 = Math.max(from.x, toX);
+): { x: number; y: number; railX: number }[] {
+  const minX = Math.min(x1, x2);
+  const maxX = Math.max(x1, x2);
   const jumpers: { x: number; y: number; railX: number }[] = [];
 
   for (const [name, col] of railColumns) {
     if (sourceVar === name) continue;
     const rx = railX(col);
-    if (rx > x1 + 4 && rx < x2 - 4) {
+    if (rx > minX + 4 && rx < maxX - 4) {
       jumpers.push({ x: rx, y, railX: rx });
     }
   }
+  return jumpers;
+}
 
-  return {
-    id: nextWireId(),
-    points: [
-      { x: from.x, y },
-      { x: toX, y },
-    ],
-    jumpers,
-  };
+/** Horizontal → vertical → horizontal into gate input (orthogonal routing) */
+function makeOrthogonalWireToGate(
+  from: Point,
+  gateInputX: number,
+  gateInputY: number,
+  railColumns: Map<string, number>,
+  sourceVar?: string,
+): WireLayout {
+  const stub = LAYOUT.gateWireStub;
+  const stubX = gateInputX - stub;
+  const segments: WireSegmentLayout[] = [];
+
+  if (Math.abs(from.x - stubX) > 0.5) {
+    segments.push({
+      points: [
+        { x: from.x, y: from.y },
+        { x: stubX, y: from.y },
+      ],
+      jumpers: collectRailJumpers(from.x, stubX, from.y, railColumns, sourceVar),
+    });
+  }
+
+  if (Math.abs(from.y - gateInputY) > 0.5) {
+    segments.push({
+      points: [
+        { x: stubX, y: from.y },
+        { x: stubX, y: gateInputY },
+      ],
+      jumpers: [],
+    });
+  }
+
+  if (Math.abs(stubX - gateInputX) > 0.5) {
+    segments.push({
+      points: [
+        { x: stubX, y: gateInputY },
+        { x: gateInputX, y: gateInputY },
+      ],
+      jumpers: [],
+    });
+  }
+
+  return { id: nextWireId(), segments };
 }
 
 function layoutNode(
   ast: AST,
   railColumns: Map<string, number>,
+  gateZoneStartX: number,
   yCursor: { value: number },
 ): NodeResult {
   switch (ast.type) {
@@ -72,19 +127,20 @@ function layoutNode(
       const x = railX(col);
       const y = yCursor.value;
       yCursor.value += LAYOUT.rowStep;
-      return { point: { x, y }, gates: [], wires: [] };
+      return { point: { x, y }, gates: [], wires: [], depth: 0 };
     }
     case 'not': {
-      const child = layoutNode(ast.child, railColumns, yCursor);
-      const gateX = child.point.x + LAYOUT.layerSpacing;
+      const child = layoutNode(ast.child, railColumns, gateZoneStartX, yCursor);
+      const depth = child.depth + 1;
+      const inputX = gateInputX(gateZoneStartX, depth);
       const gateY = child.point.y;
-      const inputX = gateX - LAYOUT.notWidth;
       const wires = [...child.wires];
 
       wires.push(
-        makeHorizontalWire(
+        makeOrthogonalWireToGate(
           child.point,
           inputX,
+          gateY,
           railColumns,
           ast.child.type === 'var' ? ast.child.name : undefined,
         ),
@@ -93,10 +149,10 @@ function layoutNode(
       const gate: GateLayout = {
         id: nextGateId(),
         type: 'NOT',
-        x: gateX - LAYOUT.notWidth,
+        x: inputX,
         y: gateY - LAYOUT.notHeight / 2,
         inputYs: [gateY],
-        outputX: gateX + 4,
+        outputX: gateOutputX(depth, 'NOT', gateZoneStartX),
         outputY: gateY,
       };
 
@@ -104,34 +160,45 @@ function layoutNode(
         point: { x: gate.outputX, y: gateY },
         gates: [...child.gates, gate],
         wires,
+        depth,
       };
     }
     case 'and':
     case 'or': {
-      const left = layoutNode(ast.left, railColumns, yCursor);
-      const right = layoutNode(ast.right, railColumns, yCursor);
+      const left = layoutNode(ast.left, railColumns, gateZoneStartX, yCursor);
+      const right = layoutNode(ast.right, railColumns, gateZoneStartX, yCursor);
 
-      const maxChildX = Math.max(left.point.x, right.point.x);
-      const gateX = maxChildX + LAYOUT.layerSpacing;
+      const depth = Math.max(left.depth, right.depth) + 1;
+      const inputX = gateInputX(gateZoneStartX, depth);
       const gateY = (left.point.y + right.point.y) / 2;
-      const inputX = gateX - LAYOUT.gateWidth;
+      const gateTop = gateY - LAYOUT.gateHeight / 2;
+      const gateBottom = gateY + LAYOUT.gateHeight / 2;
 
       const wires = [...left.wires, ...right.wires];
 
       const leftVar = ast.left.type === 'var' ? ast.left.name : undefined;
       const rightVar = ast.right.type === 'var' ? ast.right.name : undefined;
 
-      wires.push(makeHorizontalWire(left.point, inputX, railColumns, leftVar));
-      wires.push(makeHorizontalWire(right.point, inputX, railColumns, rightVar));
+      const upperFrom = left.point.y <= right.point.y ? left.point : right.point;
+      const lowerFrom = left.point.y <= right.point.y ? right.point : left.point;
+      const upperVar = left.point.y <= right.point.y ? leftVar : rightVar;
+      const lowerVar = left.point.y <= right.point.y ? rightVar : leftVar;
+
+      wires.push(
+        makeOrthogonalWireToGate(upperFrom, inputX, gateTop, railColumns, upperVar),
+      );
+      wires.push(
+        makeOrthogonalWireToGate(lowerFrom, inputX, gateBottom, railColumns, lowerVar),
+      );
 
       const gateType: GateType = ast.type === 'and' ? 'AND' : 'OR';
       const gate: GateLayout = {
         id: nextGateId(),
         type: gateType,
-        x: gateX - LAYOUT.gateWidth,
-        y: gateY - LAYOUT.gateHeight / 2,
-        inputYs: [left.point.y, right.point.y],
-        outputX: gateX + 8,
+        x: inputX,
+        y: gateTop,
+        inputYs: [gateTop, gateBottom],
+        outputX: gateOutputX(depth, gateType, gateZoneStartX),
         outputY: gateY,
       };
 
@@ -139,6 +206,7 @@ function layoutNode(
         point: { x: gate.outputX, y: gateY },
         gates: [...left.gates, ...right.gates, gate],
         wires,
+        depth,
       };
     }
   }
@@ -152,8 +220,11 @@ export function buildLayout(ast: AST): CircuitLayout {
   const railColumns = new Map<string, number>();
   variables.forEach((v, i) => railColumns.set(v, i));
 
+  const lastRailX = variables.length > 0 ? railX(variables.length - 1) : LAYOUT.marginX;
+  const gateZoneStartX = lastRailX + LAYOUT.railToGateGap;
+
   const yCursor = { value: LAYOUT.railTop + 40 };
-  const result = layoutNode(ast, railColumns, yCursor);
+  const result = layoutNode(ast, railColumns, gateZoneStartX, yCursor);
 
   const yBottom = Math.max(yCursor.value + 40, LAYOUT.railTop + 200);
   const rails: RailLayout[] = variables.map((name, i) => ({
@@ -177,8 +248,12 @@ export function buildLayout(ast: AST): CircuitLayout {
 
   wires.push({
     id: nextWireId(),
-    points: [result.point, output],
-    jumpers: [],
+    segments: [
+      {
+        points: [result.point, output],
+        jumpers: [],
+      },
+    ],
   });
 
   const width = outputX + 80;

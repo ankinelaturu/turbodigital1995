@@ -33,31 +33,40 @@ Variables are sorted alphabetically for column assignment.
 
 ## Gate placement
 
-The layout walks the AST recursively:
+Gates are placed in a **gate zone** to the right of every rail column — never overlapping the vertical rails.
+
+```
+A     B     C     |  [NOT] [AND] [OR]  → F
+|     |     |     |   gate zone
+```
+
+- `gateZoneStartX` = rightmost rail X + `railToGateGap` (50px)
+- Each gate layer uses `layerSpacing` (110px) from that start line
+- Layer depth comes from the parse tree: inner operators are closer, outer operators farther right
 
 | Node | Placement |
 |------|-----------|
 | **Variable** | Tap point on that variable’s rail; Y advances by `rowStep` |
-| **NOT** | Gate one layer right of child output; same Y as child |
-| **AND / OR** | Gate one layer right of the deeper child; Y = average of both inputs |
+| **NOT** | Gate at `gateZoneStartX + (depth − 1) × layerSpacing` |
+| **AND / OR** | Same column rule; Y = average of both input wire heights |
 
-Layer spacing (`LAYOUT.layerSpacing` = 110px) separates columns of gates from left (inputs) to right (output).
-
-Gate dimensions:
-
-| Gate | Width × Height |
-|------|----------------|
-| NOT | 28 × 28 |
-| AND / OR | 52 × 44 |
+Horizontal wires run from rails (or prior gate outputs) into the gate zone before any gate symbol is drawn there.
 
 ## Horizontal wires
 
-Connections are **horizontal** from a source point to a gate input:
+Connections use **orthogonal routing** into each gate:
 
-- Variable tap: from `(railX, y)` to gate input X
-- Gate output: from previous gate’s output point to next gate input
+1. Horizontal from source (rail or prior gate) to `gateInputX − 15px` (jumpers on crossed rails)
+2. Vertical at that column to the gate input height
+3. Short horizontal into the gate
 
-Wire routing is intentionally simple — no global pathfinding.
+```
+source --------+
+               |
+               +---- gate
+```
+
+Output to **F** remains a straight horizontal segment.
 
 ## Jumper arcs
 
@@ -110,12 +119,13 @@ Defined in `src/lib/types.ts` as `LAYOUT`:
 |----------|-------|---------|
 | `marginX` | 60 | Left padding |
 | `marginY` | 70 | Top padding |
-| `railSpacing` | 90 | Distance between rail columns |
+| `railSpacing` | 20 | Distance between rail columns |
 | `layerSpacing` | 110 | Horizontal gap between logic layers |
 | `gateWidth` | 52 | AND/OR symbol width |
 | `gateHeight` | 44 | AND/OR symbol height |
 | `notWidth` | 28 | NOT triangle width |
 | `notHeight` | 28 | NOT triangle height |
+| `gateWireStub` | 15 | Horizontal stop before gate; wire turns vertical then enters |
 | `rowStep` | 56 | Vertical spacing between tap points |
 | `jumperRadius` | 10 | Jumper arc radius |
 | `railTop` | 50 | Y where rails begin |

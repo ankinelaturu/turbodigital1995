@@ -82,9 +82,9 @@ function gateStrokes(
       const left = x;
       const top = y;
       const bottom = y + h;
-      const right = x + w;
       const midY = y + h / 2;
       const arcR = h / 2;
+      const arcCx = left + arcR;
       strokes.push({
         id: sid(),
         kind: 'line',
@@ -97,25 +97,11 @@ function gateStrokes(
       });
       strokes.push({
         id: sid(),
-        kind: 'arc',
-        phase: 'gate',
-        points: [],
-        arc: {
-          cx: left,
-          cy: midY,
-          r: arcR,
-          start: -Math.PI / 2,
-          end: Math.PI / 2,
-        },
-        durationMs: dur * 0.6,
-      });
-      strokes.push({
-        id: sid(),
         kind: 'line',
         phase: 'gate',
         points: [
           { x: left, y: top },
-          { x: right, y: top },
+          { x: arcCx, y: top },
         ],
         durationMs: dur * 0.2,
       });
@@ -125,9 +111,23 @@ function gateStrokes(
         phase: 'gate',
         points: [
           { x: left, y: bottom },
-          { x: right, y: bottom },
+          { x: arcCx, y: bottom },
         ],
         durationMs: dur * 0.2,
+      });
+      strokes.push({
+        id: sid(),
+        kind: 'arc',
+        phase: 'gate',
+        points: [],
+        arc: {
+          cx: arcCx,
+          cy: midY,
+          r: arcR,
+          start: -Math.PI / 2,
+          end: Math.PI / 2,
+        },
+        durationMs: dur * 0.6,
       });
       break;
     }
@@ -166,6 +166,26 @@ function gateStrokes(
     }
   }
   return strokes;
+}
+
+function wireSegmentStrokes(
+  a: Point,
+  b: Point,
+  jumpers: { railX: number; y: number }[],
+): Stroke[] {
+  if (Math.abs(a.y - b.y) < 0.5) {
+    return wireStrokesWithJumpers(a, b, jumpers);
+  }
+  const len = Math.abs(b.y - a.y);
+  return [
+    {
+      id: sid(),
+      kind: 'line',
+      phase: 'wire',
+      points: [a, b],
+      durationMs: 200 + len * 1.2,
+    },
+  ];
 }
 
 function wireStrokesWithJumpers(
@@ -264,8 +284,10 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
   }
 
   for (const wire of layout.wires) {
-    const [a, b] = wire.points;
-    strokes.push(...wireStrokesWithJumpers(a, b, wire.jumpers));
+    for (const seg of wire.segments) {
+      const [a, b] = seg.points;
+      strokes.push(...wireSegmentStrokes(a, b, seg.jumpers));
+    }
   }
 
   for (const gate of layout.gates) {
