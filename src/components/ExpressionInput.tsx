@@ -3,6 +3,8 @@ import { OUTPUT_NAME, type SourceSpan } from '../lib/types';
 export interface PresetExpression {
   label: string;
   expr: string;
+  /** Shown on hover — keeps chip text short */
+  hint?: string;
 }
 
 export const PRESETS: PresetExpression[] = [
@@ -16,6 +18,16 @@ export const PRESETS: PresetExpression[] = [
   { label: 'A+B·C', expr: 'A+B·C' },
   { label: 'Half adder sum', expr: "A·B'+A'·B" },
   { label: 'Half adder carry', expr: 'A·B' },
+  {
+    label: 'Twin towers',
+    expr: "((A·B)+(C·D'))·((E+F')+(A'·B'))+(C·E·F)",
+    hint: 'Two stacked sum-of-products blocks, multiplied, plus C·E·F',
+  },
+  {
+    label: 'Fuse cascade',
+    expr: "((A+B)·(C'+D))·(E+F')+A·B·C·D·E·F",
+    hint: 'Product of sum pairs, then a six-input AND finale',
+  },
 ];
 
 interface ExpressionInputProps {
@@ -92,7 +104,7 @@ export function ExpressionInput({
             type="button"
             className="chip"
             onClick={() => onChange(p.expr)}
-            title={p.expr}
+            title={p.hint ? `${p.hint}\n\n${p.expr}` : p.expr}
           >
             {p.label}
           </button>
