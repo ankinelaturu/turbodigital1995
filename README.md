@@ -13,19 +13,25 @@ npm run dev
 
 ## Features
 
-- Parse Boolean expressions (`·`, `+`, `'`, parentheses)
+- Parse Boolean expressions (`·`, `^`, `+`, `'`, parentheses; keywords `AND`, `OR`, `XOR`, `NOT`)
 - Vertical input rails per variable with animated pen-style drawing
 - Horizontal wire taps and jumper arcs at rail crossings
-- AND / OR / NOT gate symbols from lines and arcs
+- AND / OR / XOR / NOT gate symbols from lines and arcs
+- Interactive simulation with input switches after the pen draw
 - Phosphor green CRT dark theme
 - Truth table for all input combinations
 
 ## Syntax
 
-| Operator | Symbols |
-|----------|---------|
-| AND | `·` (also `*` accepted) |
-| OR | `+` |
-| NOT | `'` or `!` |
+Inputs are **A–Y**; **Z** is reserved for the circuit output terminal.
+
+| Operation | Symbols |
+|-----------|---------|
+| AND | `·` (middle dot), `*`, `&`, `.`; also juxtaposition (`AB` = `A·B`) |
+| OR | `+`, `\|`; keyword `OR` |
+| XOR | `^`; keyword `XOR` |
+| NOT | postfix `'` (e.g. `C'`); keyword `NOT` |
+
+Precedence (low → high): **OR**, **XOR**, **AND**, **NOT**. Parentheses override precedence.
 
 Example: `S'·A+S·B` (2:1 multiplexer)
