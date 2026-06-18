@@ -10,6 +10,8 @@ export interface SimulationState {
   output: boolean;
   activeRails: Set<string>;
   activeSegments: Set<string>;
+  /** Gate ids whose evaluated output is HIGH */
+  activeGates: Set<string>;
 }
 
 function collectGateAsts(ast: AST): AST[] {
@@ -32,8 +34,11 @@ export function computeSimulation(
 ): SimulationState {
   const gateAsts = collectGateAsts(ast);
   const gateValues = new Map<string, boolean>();
+  const activeGates = new Set<string>();
   layout.gates.forEach((g, i) => {
-    gateValues.set(g.id, evaluate(gateAsts[i], inputs));
+    const value = evaluate(gateAsts[i], inputs);
+    gateValues.set(g.id, value);
+    if (value) activeGates.add(g.id);
   });
 
   const output = evaluate(ast, inputs);
@@ -60,7 +65,7 @@ export function computeSimulation(
     }
   }
 
-  return { output, activeRails, activeSegments };
+  return { output, activeRails, activeSegments, activeGates };
 }
 
 export function segmentDelta(

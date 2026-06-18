@@ -1,6 +1,6 @@
 import type { CircuitLayout, Point } from './types';
 import { COLORS, LAYOUT, OUTPUT_NAME } from './types';
-import { drawCompletedStroke, drawCRTOverlay } from './canvasDraw';
+import { drawCompletedStroke, drawCRTOverlay, drawGateHaloStroke } from './canvasDraw';
 import { gateStrokes, partialPolyline } from './drawQueue';
 import { segmentKey, type SimulationState } from './simulate';
 
@@ -218,7 +218,20 @@ function drawWires(
 function drawGates(ctx: CanvasRenderingContext2D, layout: CircuitLayout): void {
   for (const gate of layout.gates) {
     for (const stroke of gateStrokes(gate)) {
-      drawCompletedStroke(ctx, stroke);
+      drawCompletedStroke(ctx, stroke, false);
+    }
+  }
+}
+
+function drawActiveGateHalos(
+  ctx: CanvasRenderingContext2D,
+  layout: CircuitLayout,
+  sim: SimulationState,
+): void {
+  for (const gate of layout.gates) {
+    if (!sim.activeGates.has(gate.id)) continue;
+    for (const stroke of gateStrokes(gate)) {
+      drawGateHaloStroke(ctx, stroke);
     }
   }
 }
@@ -274,4 +287,5 @@ export function paintSimulation(
   drawGates(ctx, layout);
   drawOutput(ctx, layout, sim.output);
   drawCRTOverlay(ctx, layout.width, layout.height);
+  drawActiveGateHalos(ctx, layout, sim);
 }

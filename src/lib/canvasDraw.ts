@@ -6,22 +6,13 @@ import {
 } from '../lib/drawQueue';
 import { COLORS } from '../lib/types';
 
-export function drawStroke(
+type GateDrawMode = 'flat' | 'glow' | 'halo';
+
+function renderStrokePath(
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
-  progress: number,
+  t: number,
 ): void {
-  const isGate = stroke.phase === 'gate';
-  ctx.strokeStyle = isGate ? COLORS.gate : COLORS.phosphor;
-  ctx.fillStyle = isGate ? COLORS.gate : COLORS.phosphor;
-  ctx.lineWidth = 1.5;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.shadowColor = isGate ? COLORS.gateGlow : COLORS.phosphorGlow;
-  ctx.shadowBlur = 4;
-
-  const t = Math.min(1, Math.max(0, progress));
-
   switch (stroke.kind) {
     case 'line': {
       const pts = partialPolyline(stroke.points, t);
@@ -58,16 +49,6 @@ export function drawStroke(
       ctx.stroke();
       break;
     }
-    case 'text': {
-      if (t < 1) return;
-      const p = stroke.points[0];
-      ctx.font = '600 18px "IBM Plex Mono", monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowBlur = 8;
-      ctx.fillText(stroke.text ?? '', p.x, p.y);
-      break;
-    }
     case 'dot': {
       const p = stroke.points[0];
       const r = (stroke.dotR ?? 2) * t;
@@ -77,14 +58,90 @@ export function drawStroke(
       ctx.fill();
       break;
     }
+    case 'text': {
+      if (t < 1) return;
+      const p = stroke.points[0];
+      ctx.font = '600 18px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(stroke.text ?? '', p.x, p.y);
+      break;
+    }
   }
+}
+
+function drawGateStroke(
+  ctx: CanvasRenderingContext2D,
+  stroke: Stroke,
+  t: number,
+  mode: GateDrawMode,
+): void {
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+
+  if (mode === 'glow' || mode === 'halo') {
+    const halos: { width: number; color: string }[] = [
+      { width: 14, color: COLORS.gateActiveHaloOuter },
+      { width: 9, color: COLORS.gateActiveHalo },
+      { width: 5, color: 'rgba(255, 100, 100, 0.7)' },
+    ];
+    for (const halo of halos) {
+      ctx.strokeStyle = halo.color;
+      ctx.fillStyle = halo.color;
+      ctx.lineWidth = halo.width;
+      renderStrokePath(ctx, stroke, t);
+    }
+  }
+
+  if (mode !== 'halo') {
+    ctx.strokeStyle = COLORS.gate;
+    ctx.fillStyle = COLORS.gate;
+    ctx.lineWidth = 1.5;
+    renderStrokePath(ctx, stroke, t);
+  }
+}
+
+export function drawStroke(
+  ctx: CanvasRenderingContext2D,
+  stroke: Stroke,
+  progress: number,
+  gateGlow = false,
+): void {
+  const isGate = stroke.phase === 'gate';
+  const t = Math.min(1, Math.max(0, progress));
+
+  if (isGate) {
+    drawGateStroke(ctx, stroke, t, gateGlow ? 'glow' : 'flat');
+    return;
+  }
+
+  ctx.strokeStyle = COLORS.phosphor;
+  ctx.fillStyle = COLORS.phosphor;
+  ctx.shadowColor = COLORS.phosphorGlow;
+  ctx.shadowBlur = 4;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  renderStrokePath(ctx, stroke, t);
 }
 
 export function drawCompletedStroke(
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
+  gateGlow = false,
 ): void {
-  drawStroke(ctx, stroke, 1);
+  drawStroke(ctx, stroke, 1, gateGlow);
+}
+
+/** Halo-only pass for active gates — draw after CRT overlay so glow stays visible. */
+export function drawGateHaloStroke(
+  ctx: CanvasRenderingContext2D,
+  stroke: Stroke,
+): void {
+  if (stroke.phase !== 'gate') return;
+  drawGateStroke(ctx, stroke, 1, 'halo');
 }
 
 export function strokeTotalLength(stroke: Stroke): number {

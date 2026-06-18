@@ -23,6 +23,9 @@ export const COLORS = {
   /** Gate body + pins (debug contrast vs green wires) */
   gate: '#ff4444',
   gateGlow: 'rgba(255, 68, 68, 0.4)',
+  /** Wide halo passes when gate output is HIGH */
+  gateActiveHalo: 'rgba(255, 80, 80, 0.55)',
+  gateActiveHaloOuter: 'rgba(255, 68, 68, 0.2)',
 };
 
 /** Temporary inspection toggles — flip gatesOnly off to restore full circuit */
