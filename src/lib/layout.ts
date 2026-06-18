@@ -1,3 +1,10 @@
+/**
+ * AST → `CircuitLayout`: vertical input rails, orthogonal wires, gate columns by depth.
+ *
+ * Layout mirrors AST structure recursively. `drawSteps` interleaves wires and gates in
+ * evaluation order so the pen animation follows signal flow. Wire metadata (`fromVar`,
+ * `fromGateId`, etc.) feeds `simulate.ts`.
+ */
 import type { AST } from './parse';
 import { collectVariables, formatExpression } from './parse';
 import type {
@@ -15,6 +22,7 @@ import type {
 import { LAYOUT } from './types';
 import { buildGatePins } from './gateGeometry';
 
+/** Result of laying out one AST subtree — output tap point plus accumulated geometry. */
 interface NodeResult {
   point: Point;
   gates: GateLayout[];
@@ -44,6 +52,10 @@ function gateColumnX(gateZoneStartX: number, depth: number): number {
   return gateZoneStartX + (depth - 1) * LAYOUT.layerSpacing;
 }
 
+/**
+ * Places arc jumpers on horizontal segments that cross other input rails.
+ * Skips the rail the wire originated from (`sourceVar`).
+ */
 function collectRailJumpers(
   x1: number,
   x2: number,
@@ -111,6 +123,7 @@ function makeOrthogonalWireToGate(
   return { id: nextWireId(), segments, ...meta };
 }
 
+/** Recursively place gates left-to-right; deeper subtrees sit in earlier columns. */
 function layoutNode(
   ast: AST,
   railColumns: Map<string, number>,
@@ -200,6 +213,7 @@ function layoutNode(
       const upperVar = left.point.y <= right.point.y ? leftVar : rightVar;
       const lowerVar = left.point.y <= right.point.y ? rightVar : leftVar;
 
+      // Upper input wire is drawn before the right subtree so pen order matches evaluation
       const upperFromLeft = left.point.y <= right.point.y;
       const upperSourceGateId = upperFromLeft
         ? left.gates.length > 0
@@ -275,6 +289,7 @@ function layoutNode(
   }
 }
 
+/** Build the full circuit graph for a parsed expression. */
 export function buildLayout(ast: AST): CircuitLayout {
   wireId = 0;
   gateId = 0;

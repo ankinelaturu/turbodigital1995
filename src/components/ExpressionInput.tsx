@@ -1,3 +1,4 @@
+/** Expression field, example presets, and Draw trigger. */
 import { OUTPUT_NAME, type SourceSpan } from '../lib/types';
 
 export interface PresetExpression {
@@ -7,6 +8,7 @@ export interface PresetExpression {
   hint?: string;
 }
 
+/** One-click example expressions shown as chips below the input field. */
 export const PRESETS: PresetExpression[] = [
   { label: 'A+B+C', expr: 'A+B+C' },
   { label: 'A·B + C', expr: 'A·B+C' },

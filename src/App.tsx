@@ -1,3 +1,7 @@
+/**
+ * Root app shell: expression input → parse/layout → canvas + truth table.
+ * `drawKey` bumps on each Draw click to restart the pen animation.
+ */
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { ExpressionInput } from './components/ExpressionInput';
 import { CircuitCanvas } from './components/CircuitCanvas';

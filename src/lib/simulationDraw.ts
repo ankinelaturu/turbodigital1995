@@ -1,3 +1,9 @@
+/**
+ * Simulation-mode full-canvas paint from `CircuitLayout` + `SimulationState`.
+ *
+ * Replaces the pen stroke queue after the initial draw completes. Supports
+ * partial segment rendering during switch-toggle flow animation.
+ */
 import type { CircuitLayout, Point } from './types';
 import { COLORS, LAYOUT, OUTPUT_NAME } from './types';
 import { drawCompletedStroke, drawCRTOverlay, drawGateHaloStroke } from './canvasDraw';
@@ -11,6 +17,7 @@ export interface FlowEntry {
 
 type SegmentVisual = 'on' | 'off' | { flow: number; direction: 'on' | 'off' };
 
+/** Merge steady-state segment activity with in-flight flow animation progress. */
 function resolveSegmentVisual(
   key: string,
   sim: SimulationState,
@@ -271,6 +278,9 @@ function drawOutput(
   ctx.fillText(OUTPUT_NAME, x + r + 10, y);
 }
 
+/**
+ * Full simulation frame. Gate halos are drawn last so they sit above the CRT overlay.
+ */
 export function paintSimulation(
   ctx: CanvasRenderingContext2D,
   layout: CircuitLayout,

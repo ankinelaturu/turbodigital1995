@@ -1,3 +1,7 @@
+/**
+ * Gate pin and body geometry — single source of truth for layout wire endpoints
+ * and canvas gate symbols. `buildGatePins` is called from both `layout.ts` and `drawQueue.ts`.
+ */
 import { LAYOUT, type GateType, type Point } from './types';
 import type { GateLayout } from './types';
 import { orGateBackXAtY, xorGateBezierCurves } from './bezier';

@@ -1,3 +1,9 @@
+/**
+ * Low-level canvas stroke rendering for pen animation and simulation.
+ *
+ * Gates use red (`COLORS.gate`) always; active gates get a multi-pass halo drawn
+ * on top of the CRT overlay so the glow is not dimmed away.
+ */
 import type { Stroke } from '../lib/drawQueue';
 import {
   arcLength,
@@ -8,6 +14,7 @@ import { COLORS } from '../lib/types';
 
 type GateDrawMode = 'flat' | 'glow' | 'halo';
 
+/** Draw a stroke path at progress `t` (0–1) for pen animation partial segments. */
 function renderStrokePath(
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
@@ -70,6 +77,10 @@ function renderStrokePath(
   }
 }
 
+/**
+ * Gate strokes: `flat` = crisp red only; `glow` = halo + core (pen mode);
+ * `halo` = wide passes only — composited after CRT in simulation.
+ */
 function drawGateStroke(
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
@@ -159,6 +170,7 @@ export function strokeTotalLength(stroke: Stroke): number {
   }
 }
 
+/** Vignette + scanlines applied after the circuit is drawn. */
 export function drawCRTOverlay(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   const grad = ctx.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.7);
   grad.addColorStop(0, 'rgba(0,0,0,0)');

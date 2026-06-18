@@ -1,3 +1,8 @@
+/**
+ * Evaluate an AST against input values and build truth tables.
+ *
+ * Variable names map to booleans in `env`; missing keys are treated as false.
+ */
 import type { AST } from './parse';
 
 export function evaluate(ast: AST, env: Record<string, boolean>): boolean {
@@ -20,6 +25,7 @@ export interface TruthTableRow {
   output: boolean;
 }
 
+/** Enumerate all 2^n input combinations in standard truth-table order (MSB-first). */
 export function buildTruthTable(ast: AST, variables: string[]): TruthTableRow[] {
   const n = variables.length;
   const rows: TruthTableRow[] = [];

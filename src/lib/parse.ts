@@ -1,3 +1,12 @@
+/**
+ * Boolean expression parser.
+ *
+ * Syntax: `·` / `*` / `&` AND (also juxtaposition), `^` XOR, `+` / `|` OR,
+ * `'` postfix NOT, `NOT` keyword, parentheses. Inputs A–Y; `Z` is reserved for output.
+ *
+ * Precedence (low → high): OR, XOR, AND, NOT. Each AST node carries a `SourceSpan`
+ * for gate-hover ↔ expression highlighting.
+ */
 import { OUTPUT_NAME } from './types';
 
 export interface SourceSpan {
@@ -44,6 +53,7 @@ function readKeyword(
   return null;
 }
 
+/** Lex the input string; rejects `Z` as an input variable. */
 function tokenize(input: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
@@ -106,6 +116,7 @@ function tokenize(input: string): Token[] {
   return tokens;
 }
 
+/** Entry point — returns the root AST or throws `ParseError`. */
 export function parse(expr: string): AST {
   const tokens = tokenize(expr);
   if (tokens.length === 0) throw new ParseError('Empty expression');
@@ -159,6 +170,7 @@ function parseAnd(tokens: Token[]): [AST, Token[]] {
       };
       rest = afterRight;
     } else if (rest[0].kind === 'var' || rest[0].kind === 'not' || rest[0].kind === 'lparen') {
+      // Implicit AND: `A B` or `A(B+C)` without an explicit operator
       const [right, afterRight] = parseUnary(rest);
       left = {
         type: 'and',

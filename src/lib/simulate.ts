@@ -1,7 +1,14 @@
+/**
+ * Interactive simulation: which rails, wire segments, and gates are logically HIGH.
+ *
+ * Gate order from `collectGateAsts` matches `layout.gates` (post-order AST walk).
+ * Segment activity is derived from wire metadata tagged during layout.
+ */
 import type { AST } from './parse';
 import { evaluate } from './evaluate';
 import type { CircuitLayout } from './types';
 
+/** Stable id for a wire segment — used for flow-animation deltas. */
 export function segmentKey(wireId: string, segIndex: number): string {
   return `${wireId}:${segIndex}`;
 }
@@ -14,6 +21,7 @@ export interface SimulationState {
   activeGates: Set<string>;
 }
 
+/** Post-order gate list — index *i* aligns with `layout.gates[i]`. */
 function collectGateAsts(ast: AST): AST[] {
   switch (ast.type) {
     case 'var':
@@ -27,6 +35,7 @@ function collectGateAsts(ast: AST): AST[] {
   }
 }
 
+/** Evaluate all gate outputs and derive lit rails, wires, and active gate ids. */
 export function computeSimulation(
   ast: AST,
   layout: CircuitLayout,
@@ -68,6 +77,7 @@ export function computeSimulation(
   return { output, activeRails, activeSegments, activeGates };
 }
 
+/** Diff active segment sets when inputs change — drives delta-only flow animation. */
 export function segmentDelta(
   prev: Set<string>,
   next: Set<string>,
@@ -79,6 +89,7 @@ export function segmentDelta(
   return { added, removed };
 }
 
+/** All switches OFF — matches truth-table row 0. */
 export function defaultInputs(variables: string[]): Record<string, boolean> {
   const inputs: Record<string, boolean> = {};
   for (const v of variables) inputs[v] = false;

@@ -1,3 +1,6 @@
+/**
+ * Bézier sampling for OR/XOR gate outlines and pin placement on the curved back edge.
+ */
 import type { Point } from './types';
 
 /** Cubic Bezier: B(t) with control points p0, p1, p2, p3 */

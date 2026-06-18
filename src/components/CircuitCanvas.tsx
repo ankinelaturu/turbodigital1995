@@ -1,3 +1,14 @@
+/**
+ * Circuit canvas: pen-draw animation, then interactive simulation.
+ *
+ * Lifecycle:
+ * 1. `drawKey` change → build stroke queue, animate pen draw
+ * 2. Queue complete → `computeSimulation`, enable input switches
+ * 3. Switch toggle → delta flow animation on changed segments only
+ *
+ * The draw effect intentionally depends only on `[layout, drawKey]` — callbacks
+ * are held in refs so completing the animation does not restart the pen draw.
+ */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AST } from '../lib/parse';
 import type { CircuitLayout, SourceSpan } from '../lib/types';
@@ -98,6 +109,7 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
     setSimTick((t) => t + 1);
   }, [layout, ast]);
 
+  // Stable refs so the pen-draw effect does not re-run when simulation state updates
   const paintPenRef = useRef(paintPen);
   paintPenRef.current = paintPen;
   const paintSimRef = useRef(paintSim);

@@ -1,8 +1,14 @@
+/**
+ * Shared types, layout constants, and the `CircuitLayout` graph produced by `layout.ts`.
+ *
+ * Pipeline: parse → buildLayout → buildDrawQueue / computeSimulation → canvas paint.
+ */
 export interface Point {
   x: number;
   y: number;
 }
 
+/** CRT phosphor palette — wires/rails use on/dim pairs; gates stay red with optional halo. */
 export const COLORS = {
   bg: '#050805',
   phosphor: '#39ff14',
@@ -42,6 +48,7 @@ export const DRAW_SPEED = 4;
 /** Fast current-flow animation when switches change (ms per segment). */
 export const SIM_FLOW_MS = 45;
 
+/** Pixel geometry for rails, gates, wires, switches, and the Z output terminal. */
 export const LAYOUT = {
   marginX: 60,
   marginY: 70,
@@ -105,10 +112,14 @@ export interface WireSegmentLayout {
 export interface WireLayout {
   id: string;
   segments: WireSegmentLayout[];
+  /** Simulation: signal source when wire taps an input rail */
   fromVar?: string;
+  /** Simulation: signal source when wire leaves a gate output */
   fromGateId?: string;
   toGateId?: string;
+  /** 0 = upper pin, 1 = lower pin on dual-input gates */
   toInput?: 0 | 1;
+  /** Final wire to the Z output terminal */
   isOutput?: boolean;
 }
 
@@ -143,7 +154,9 @@ export interface CircuitLayout {
   labels: LabelLayout[];
   /** Evaluation-order sequence of wires and gates to animate */
   drawSteps: DrawStep[];
+  /** Tap points where each input variable leaves its vertical rail */
   varTaps: VarTapLayout[];
+  /** HTML switch overlay positions (below input labels) */
   switches: SwitchLayout[];
   output: Point;
   width: number;

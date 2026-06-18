@@ -1,3 +1,9 @@
+/**
+ * Build the ordered list of pen strokes for the initial draw animation.
+ *
+ * Order: labels → rails → `drawSteps` (wires + gates interleaved) → Z label.
+ * Horizontal wires crossing rails emit jumper arcs and junction dots.
+ */
 import type { CircuitLayout, GateLayout, Point, WireLayout } from './types';
 import { DEBUG, DRAW_SPEED, LAYOUT, OUTPUT_NAME } from './types';
 import { orGateBezierCurves, xorGateBezierCurves } from './bezier';
@@ -30,6 +36,7 @@ function sid(): string {
   return `s${strokeId++}`;
 }
 
+/** Scale base durations by `DRAW_SPEED`; floor keeps very short strokes visible. */
 function animMs(ms: number): number {
   return Math.max(35, Math.round(ms / DRAW_SPEED));
 }
@@ -65,6 +72,7 @@ function addLineStroke(
   });
 }
 
+/** Canvas strokes for one gate symbol — shared by pen draw and simulation paint. */
 export function gateStrokes(gate: GateLayout): Stroke[] {
   const strokes: Stroke[] = [];
   const gateDur = 280;
@@ -273,6 +281,7 @@ function wireSegmentStrokes(
   ];
 }
 
+/** Split a horizontal wire at rail crossings into segments + upward jumper arcs (∩). */
 function wireStrokesWithJumpers(
   a: Point,
   b: Point,
@@ -358,6 +367,7 @@ function strokesForWire(
   return strokes;
 }
 
+/** Turn a laid-out circuit into the timed stroke queue for pen animation. */
 export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
   strokeId = 0;
   const strokes: Stroke[] = [];
@@ -432,6 +442,7 @@ export function pointOnArc(
   return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
 }
 
+/** Clip a polyline to `progress` along its total path length (pen animation). */
 export function partialPolyline(points: Point[], progress: number): Point[] {
   if (points.length < 2) return points;
   const total = pathLength(points);

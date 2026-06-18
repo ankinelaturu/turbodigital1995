@@ -1,3 +1,4 @@
+/** Scrollable 2^n truth table for the current expression's input variables. */
 import type { TruthTableRow } from '../lib/evaluate';
 import { OUTPUT_NAME } from '../lib/types';
 
