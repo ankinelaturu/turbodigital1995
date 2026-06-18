@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AST } from '../lib/parse';
 import type { CircuitLayout, SourceSpan } from '../lib/types';
-import { COLORS } from '../lib/types';
+import { COLORS, SIM_FLOW_MS } from '../lib/types';
 import { buildDrawQueue, type Stroke } from '../lib/drawQueue';
 import { drawCompletedStroke, drawCRTOverlay, drawStroke } from '../lib/canvasDraw';
 import { gateHitBounds } from '../lib/gateGeometry';
+import {
+  computeSimulation,
+  defaultInputs,
+  segmentDelta,
+  type SimulationState,
+} from '../lib/simulate';
+import { paintSimulation, type FlowEntry } from '../lib/simulationDraw';
 import { CursorTooltip } from '@/components/ui/tooltip';
 
 interface CircuitCanvasProps {
   layout: CircuitLayout | null;
+  ast: AST | null;
   drawKey: number;
   onGateHover?: (hover: GateHover | null) => void;
 }
@@ -26,18 +35,28 @@ interface GateHover {
   sourceSpan: SourceSpan;
 }
 
-export function CircuitCanvas({ layout, drawKey, onGateHover }: CircuitCanvasProps) {
+export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
+  const simAnimRef = useRef<number>(0);
   const strokesRef = useRef<StrokeState[]>([]);
   const currentIndexRef = useRef(0);
   const strokeStartRef = useRef(0);
+  const flowAnimRef = useRef<Map<string, FlowEntry>>(new Map());
+  const flowStartRef = useRef(0);
+  const simRef = useRef<SimulationState | null>(null);
+  const prevSegmentsRef = useRef<Set<string>>(new Set());
+  const completeRef = useRef(false);
+
   const [complete, setComplete] = useState(false);
   const [displayScale, setDisplayScale] = useState(1);
   const [gateHover, setGateHover] = useState<GateHover | null>(null);
+  const [inputs, setInputs] = useState<Record<string, boolean>>({});
+  const [simAnimating, setSimAnimating] = useState(false);
+  const [simTick, setSimTick] = useState(0);
 
-  const paint = useCallback(() => {
+  const paintPen = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !layout) return;
     const ctx = canvas.getContext('2d');
@@ -59,6 +78,35 @@ export function CircuitCanvas({ layout, drawKey, onGateHover }: CircuitCanvasPro
     drawCRTOverlay(ctx, layout.width, layout.height);
   }, [layout]);
 
+  const paintSim = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !layout || !simRef.current) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    paintSimulation(ctx, layout, simRef.current, flowAnimRef.current);
+  }, [layout]);
+
+  const initSimulation = useCallback(() => {
+    if (!layout || !ast) return;
+    const nextInputs = defaultInputs(layout.variables);
+    setInputs(nextInputs);
+    const sim = computeSimulation(ast, layout, nextInputs);
+    simRef.current = sim;
+    prevSegmentsRef.current = new Set(sim.activeSegments);
+    flowAnimRef.current = new Map();
+    setSimAnimating(false);
+    setSimTick((t) => t + 1);
+  }, [layout, ast]);
+
+  const paintPenRef = useRef(paintPen);
+  paintPenRef.current = paintPen;
+  const paintSimRef = useRef(paintSim);
+  paintSimRef.current = paintSim;
+  const initSimulationRef = useRef(initSimulation);
+  initSimulationRef.current = initSimulation;
+  const onGateHoverRef = useRef(onGateHover);
+  onGateHoverRef.current = onGateHover;
+
   useEffect(() => {
     if (!layout) return;
 
@@ -66,9 +114,12 @@ export function CircuitCanvas({ layout, drawKey, onGateHover }: CircuitCanvasPro
     strokesRef.current = queue.map((stroke) => ({ stroke, progress: 0, done: false }));
     currentIndexRef.current = 0;
     strokeStartRef.current = performance.now();
+    completeRef.current = false;
     setComplete(false);
     setGateHover(null);
-    onGateHover?.(null);
+    setSimAnimating(false);
+    flowAnimRef.current = new Map();
+    onGateHoverRef.current?.(null);
 
     const applySize = () => {
       const canvas = canvasRef.current;
@@ -81,7 +132,8 @@ export function CircuitCanvas({ layout, drawKey, onGateHover }: CircuitCanvasPro
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.setTransform(scale, 0, 0, scale, 0, 0);
       setDisplayScale(scale);
-      paint();
+      if (completeRef.current) paintSimRef.current();
+      else paintPenRef.current();
     };
 
     applySize();
@@ -93,8 +145,10 @@ export function CircuitCanvas({ layout, drawKey, onGateHover }: CircuitCanvasPro
       const idx = currentIndexRef.current;
       const states = strokesRef.current;
       if (idx >= states.length) {
+        completeRef.current = true;
         setComplete(true);
-        paint();
+        initSimulationRef.current();
+        paintSimRef.current();
         return;
       }
 
@@ -109,18 +163,80 @@ export function CircuitCanvas({ layout, drawKey, onGateHover }: CircuitCanvasPro
         strokeStartRef.current = now;
       }
 
-      paint();
+      paintPenRef.current();
       animRef.current = requestAnimationFrame(tick);
     };
 
-    paint();
+    paintPenRef.current();
     animRef.current = requestAnimationFrame(tick);
 
     return () => {
       cancelAnimationFrame(animRef.current);
+      cancelAnimationFrame(simAnimRef.current);
       ro.disconnect();
     };
-  }, [layout, drawKey, paint]);
+    // Only restart pen draw when layout or drawKey changes — not when simulation completes.
+  }, [layout, drawKey]);
+
+  useEffect(() => {
+    if (!complete) return;
+    paintSim();
+  }, [complete, simTick, paintSim]);
+
+  const startFlowAnimation = useCallback(
+    (added: Set<string>, removed: Set<string>, nextSim: SimulationState) => {
+      const flow = new Map<string, FlowEntry>();
+      for (const key of added) flow.set(key, { progress: 0, direction: 'on' });
+      for (const key of removed) flow.set(key, { progress: 0, direction: 'off' });
+      flowAnimRef.current = flow;
+      flowStartRef.current = performance.now();
+      simRef.current = nextSim;
+      setSimAnimating(true);
+
+      const tick = (now: number) => {
+        const elapsed = now - flowStartRef.current;
+        let allDone = true;
+        for (const entry of flowAnimRef.current.values()) {
+          entry.progress = Math.min(1, elapsed / SIM_FLOW_MS);
+          if (entry.progress < 1) allDone = false;
+        }
+
+        paintSim();
+        if (allDone) {
+          flowAnimRef.current = new Map();
+          prevSegmentsRef.current = new Set(nextSim.activeSegments);
+          setSimAnimating(false);
+          return;
+        }
+
+        simAnimRef.current = requestAnimationFrame(tick);
+      };
+
+      cancelAnimationFrame(simAnimRef.current);
+      simAnimRef.current = requestAnimationFrame(tick);
+    },
+    [paintSim],
+  );
+
+  const toggleSwitch = useCallback(
+    (name: string) => {
+      if (!layout || !ast || simAnimating || !complete) return;
+      const nextInputs = { ...inputs, [name]: !inputs[name] };
+      const nextSim = computeSimulation(ast, layout, nextInputs);
+      const { added, removed } = segmentDelta(prevSegmentsRef.current, nextSim.activeSegments);
+
+      setInputs(nextInputs);
+
+      if (added.size === 0 && removed.size === 0) {
+        simRef.current = nextSim;
+        setSimTick((t) => t + 1);
+        return;
+      }
+
+      startFlowAnimation(added, removed, nextSim);
+    },
+    [layout, ast, simAnimating, complete, inputs, startFlowAnimation],
+  );
 
   const showGateTooltip = useCallback(
     (gate: CircuitLayout['gates'][number], x: number, y: number) => {
@@ -158,32 +274,62 @@ export function CircuitCanvas({ layout, drawKey, onGateHover }: CircuitCanvasPro
         >
           <canvas ref={canvasRef} className="circuit-canvas" />
           <div className="gate-hit-layer">
-            {layout.gates.map((gate) => {
-              const bounds = gateHitBounds(gate);
-              return (
-                <button
-                  key={gate.id}
-                  type="button"
-                  className="gate-hit-target"
-                  style={{
-                    left: bounds.x * displayScale,
-                    top: bounds.y * displayScale,
-                    width: bounds.w * displayScale,
-                    height: bounds.h * displayScale,
-                  }}
-                  aria-label={`${gate.type}: ${gate.expression}`}
-                  onPointerEnter={(e) => showGateTooltip(gate, e.clientX, e.clientY)}
-                  onPointerMove={(e) => moveGateTooltip(e.clientX, e.clientY)}
-                  onPointerLeave={hideGateTooltip}
-                />
-              );
-            })}
+            {complete &&
+              layout.gates.map((gate) => {
+                const bounds = gateHitBounds(gate);
+                return (
+                  <button
+                    key={gate.id}
+                    type="button"
+                    className="gate-hit-target"
+                    style={{
+                      left: bounds.x * displayScale,
+                      top: bounds.y * displayScale,
+                      width: bounds.w * displayScale,
+                      height: bounds.h * displayScale,
+                    }}
+                    aria-label={`${gate.type}: ${gate.expression}`}
+                    onPointerEnter={(e) => showGateTooltip(gate, e.clientX, e.clientY)}
+                    onPointerMove={(e) => moveGateTooltip(e.clientX, e.clientY)}
+                    onPointerLeave={hideGateTooltip}
+                  />
+                );
+              })}
           </div>
+          {complete && (
+            <div className="switch-layer">
+              {layout.switches.map((sw) => {
+                const on = inputs[sw.name] ?? false;
+                return (
+                  <button
+                    key={sw.name}
+                    type="button"
+                    className={`input-switch ${on ? 'on' : 'off'}`}
+                    style={{
+                      left: sw.x * displayScale,
+                      top: sw.y * displayScale,
+                    }}
+                    disabled={simAnimating}
+                    aria-label={`Input ${sw.name}: ${on ? 'on' : 'off'}`}
+                    aria-pressed={on}
+                    onClick={() => toggleSwitch(sw.name)}
+                  >
+                    <span className="input-switch-track" />
+                    <span className="input-switch-thumb" />
+                    <span className="input-switch-label">{sw.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
       {!layout && <canvas ref={canvasRef} className="circuit-canvas" />}
       {!layout && <p className="canvas-placeholder">Enter an expression and click Draw</p>}
-      {layout && complete && <p className="canvas-status">Drawing complete</p>}
+      {layout && complete && !simAnimating && (
+        <p className="canvas-status">Toggle inputs to simulate</p>
+      )}
+      {layout && simAnimating && <p className="canvas-status">Current flowing…</p>}
 
       <CursorTooltip open={gateHover !== null} x={gateHover?.x ?? 0} y={gateHover?.y ?? 0}>
         {gateHover && (

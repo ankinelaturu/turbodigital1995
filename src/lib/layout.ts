@@ -8,6 +8,7 @@ import type {
   LabelLayout,
   Point,
   RailLayout,
+  VarTapLayout,
   WireLayout,
   WireSegmentLayout,
 } from './types';
@@ -19,6 +20,7 @@ interface NodeResult {
   gates: GateLayout[];
   wires: WireLayout[];
   drawSteps: DrawStep[];
+  varTaps: VarTapLayout[];
   /** Deepest gate layer in this subtree; 0 for a bare variable */
   depth: number;
 }
@@ -70,6 +72,7 @@ function makeOrthogonalWireToGate(
   pinOuterY: number,
   railColumns: Map<string, number>,
   sourceVar?: string,
+  meta?: Pick<WireLayout, 'fromVar' | 'fromGateId' | 'toGateId' | 'toInput'>,
 ): WireLayout {
   const stub = LAYOUT.gateWireStub;
   const stubX = pinOuterX - stub;
@@ -105,7 +108,7 @@ function makeOrthogonalWireToGate(
     });
   }
 
-  return { id: nextWireId(), segments };
+  return { id: nextWireId(), segments, ...meta };
 }
 
 function layoutNode(
@@ -120,15 +123,15 @@ function layoutNode(
       const x = railX(col);
       const y = yCursor.value;
       yCursor.value += LAYOUT.rowStep;
-      return { point: { x, y }, gates: [], wires: [], drawSteps: [], depth: 0 };
+      return { point: { x, y }, gates: [], wires: [], drawSteps: [], varTaps: [{ name: ast.name, x, y }], depth: 0 };
     }
     case 'not': {
       const child = layoutNode(ast.child, railColumns, gateZoneStartX, yCursor);
       const depth = child.depth + 1;
       const bodyX = gateColumnX(gateZoneStartX, depth);
       const gateY = child.point.y;
+      const gateId = nextGateId();
       const pins = buildGatePins('NOT', bodyX, 0, gateY);
-      const wires = [...child.wires];
 
       const inputWire = makeOrthogonalWireToGate(
         child.point,
@@ -136,11 +139,20 @@ function layoutNode(
         pins.inputOuter[0].y,
         railColumns,
         ast.child.type === 'var' ? ast.child.name : undefined,
+        {
+          toGateId: gateId,
+          toInput: 0,
+          fromVar: ast.child.type === 'var' ? ast.child.name : undefined,
+          fromGateId:
+            ast.child.type !== 'var' && child.gates.length > 0
+              ? child.gates[child.gates.length - 1].id
+              : undefined,
+        },
       );
-      wires.push(inputWire);
+      const wires = [...child.wires, inputWire];
 
       const gate: GateLayout = {
-        id: nextGateId(),
+        id: gateId,
         type: 'NOT',
         x: pins.body.x,
         y: pins.body.y,
@@ -160,6 +172,7 @@ function layoutNode(
           { type: 'wire', id: inputWire.id },
           { type: 'gate', id: gate.id },
         ],
+        varTaps: child.varTaps,
         depth,
       };
     }
@@ -187,12 +200,35 @@ function layoutNode(
       const upperVar = left.point.y <= right.point.y ? leftVar : rightVar;
       const lowerVar = left.point.y <= right.point.y ? rightVar : leftVar;
 
+      const upperFromLeft = left.point.y <= right.point.y;
+      const upperSourceGateId = upperFromLeft
+        ? left.gates.length > 0
+          ? left.gates[left.gates.length - 1].id
+          : undefined
+        : right.gates.length > 0
+          ? right.gates[right.gates.length - 1].id
+          : undefined;
+      const lowerSourceGateId = upperFromLeft
+        ? right.gates.length > 0
+          ? right.gates[right.gates.length - 1].id
+          : undefined
+        : left.gates.length > 0
+          ? left.gates[left.gates.length - 1].id
+          : undefined;
+
+      const gateId = nextGateId();
       const upperWire = makeOrthogonalWireToGate(
         upperFrom,
         pins.inputOuter[0].x,
         pins.inputOuter[0].y,
         railColumns,
         upperVar,
+        {
+          toGateId: gateId,
+          toInput: 0,
+          fromVar: upperVar,
+          fromGateId: upperVar ? undefined : upperSourceGateId,
+        },
       );
       const lowerWire = makeOrthogonalWireToGate(
         lowerFrom,
@@ -200,11 +236,17 @@ function layoutNode(
         pins.inputOuter[1].y,
         railColumns,
         lowerVar,
+        {
+          toGateId: gateId,
+          toInput: 1,
+          fromVar: lowerVar,
+          fromGateId: lowerVar ? undefined : lowerSourceGateId,
+        },
       );
       wires.push(upperWire, lowerWire);
 
       const gate: GateLayout = {
-        id: nextGateId(),
+        id: gateId,
         type: gateType,
         x: pins.body.x,
         y: pins.body.y,
@@ -226,6 +268,7 @@ function layoutNode(
           { type: 'wire', id: lowerWire.id },
           { type: 'gate', id: gate.id },
         ],
+        varTaps: [...left.varTaps, ...right.varTaps],
         depth,
       };
     }
@@ -274,6 +317,9 @@ export function buildLayout(ast: AST): CircuitLayout {
         jumpers: [],
       },
     ],
+    fromGateId:
+      result.gates.length > 0 ? result.gates[result.gates.length - 1].id : undefined,
+    isOutput: true,
   };
   wires.push(outputWire);
 
@@ -281,6 +327,12 @@ export function buildLayout(ast: AST): CircuitLayout {
     ...result.drawSteps,
     { type: 'wire', id: outputWire.id },
   ];
+
+  const switches = variables.map((name, i) => ({
+    name,
+    x: railX(i),
+    y: LAYOUT.railTop + LAYOUT.labelOffsetY + LAYOUT.switchBelowLabel,
+  }));
 
   const width = outputX + 80;
   const height = yBottom + 60;
@@ -292,6 +344,8 @@ export function buildLayout(ast: AST): CircuitLayout {
     wires,
     labels,
     drawSteps,
+    varTaps: result.varTaps,
+    switches,
     output,
     width,
     height,

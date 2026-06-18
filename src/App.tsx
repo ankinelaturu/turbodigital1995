@@ -45,6 +45,13 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleGateHover = useCallback(
+    (hover: { sourceSpan: SourceSpan } | null) => {
+      setHighlightSpan(hover?.sourceSpan ?? null);
+    },
+    [],
+  );
+
   return (
     <div className="app">
       <ExpressionInput
@@ -61,15 +68,16 @@ function App() {
       <main className="main-panels">
         <CircuitCanvas
           layout={layout}
+          ast={ast}
           drawKey={drawKey}
-          onGateHover={(hover) => setHighlightSpan(hover?.sourceSpan ?? null)}
+          onGateHover={handleGateHover}
         />
         <TruthTable variables={variables} rows={truthRows} />
       </main>
 
       <footer className="footer">
         <span>Phosphor green CRT mode</span>
-        <span>Rails → wires → gates</span>
+        <span>Draw → simulate with input switches</span>
       </footer>
     </div>
   );

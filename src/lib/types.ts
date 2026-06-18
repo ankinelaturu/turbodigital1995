@@ -9,6 +9,17 @@ export const COLORS = {
   phosphorDim: '#1a8f0a',
   phosphorGlow: 'rgba(57, 255, 20, 0.35)',
   label: '#5dff4a',
+  /** Inactive wire / rail (no current) */
+  phosphorOff: '#0d2a0d',
+  phosphorOffGlow: 'rgba(13, 42, 13, 0.2)',
+  /** Active wire / rail (current flowing) */
+  phosphorOn: '#39ff14',
+  phosphorOnGlow: 'rgba(57, 255, 20, 0.55)',
+  /** Output Z terminal */
+  outputOn: '#39ff14',
+  outputOff: '#1a5f1a',
+  outputOnGlow: 'rgba(57, 255, 20, 0.7)',
+  outputOffGlow: 'rgba(13, 42, 13, 0.15)',
   /** Gate body + pins (debug contrast vs green wires) */
   gate: '#ff4444',
   gateGlow: 'rgba(255, 68, 68, 0.4)',
@@ -22,8 +33,11 @@ export const DEBUG = {
 /** Circuit output terminal and truth-table column (not an input rail). */
 export const OUTPUT_NAME = 'Z';
 
-/** Values > 1 make pen strokes finish faster (2 = twice as fast). */
-export const DRAW_SPEED = 2;
+/** Values > 1 make pen strokes finish faster (4 = four times as fast). */
+export const DRAW_SPEED = 4;
+
+/** Fast current-flow animation when switches change (ms per segment). */
+export const SIM_FLOW_MS = 45;
 
 export const LAYOUT = {
   marginX: 60,
@@ -46,7 +60,10 @@ export const LAYOUT = {
   /** Filled dot where a horizontal wire meets a rail */
   railDotRadius: 4,
   labelOffsetY: -28,
+  switchBelowLabel: 20,
   railTop: 50,
+  outputLabelSize: 26,
+  outputCircleR: 22,
 };
 
 export interface SourceSpan {
@@ -85,6 +102,23 @@ export interface WireSegmentLayout {
 export interface WireLayout {
   id: string;
   segments: WireSegmentLayout[];
+  fromVar?: string;
+  fromGateId?: string;
+  toGateId?: string;
+  toInput?: 0 | 1;
+  isOutput?: boolean;
+}
+
+export interface VarTapLayout {
+  name: string;
+  x: number;
+  y: number;
+}
+
+export interface SwitchLayout {
+  name: string;
+  x: number;
+  y: number;
 }
 
 export interface LabelLayout {
@@ -106,6 +140,8 @@ export interface CircuitLayout {
   labels: LabelLayout[];
   /** Evaluation-order sequence of wires and gates to animate */
   drawSteps: DrawStep[];
+  varTaps: VarTapLayout[];
+  switches: SwitchLayout[];
   output: Point;
   width: number;
   height: number;

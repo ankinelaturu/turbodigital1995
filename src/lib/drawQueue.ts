@@ -65,7 +65,7 @@ function addLineStroke(
   });
 }
 
-function gateStrokes(gate: GateLayout): Stroke[] {
+export function gateStrokes(gate: GateLayout): Stroke[] {
   const strokes: Stroke[] = [];
   const gateDur = 280;
   const centerY = gate.type === 'NOT' ? gate.outputY : undefined;
