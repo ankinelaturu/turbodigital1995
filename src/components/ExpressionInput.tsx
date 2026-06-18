@@ -99,7 +99,7 @@ export function ExpressionInput({
       </div>
 
       <p className="syntax-hint">
-        Use · for AND, + for OR, ' or ! for NOT. Inputs: A–Y; output is {OUTPUT_NAME}.
+        Use · for AND, + for OR, ' for NOT. Inputs: A–Y; output is {OUTPUT_NAME}.
       </p>
     </section>
   );

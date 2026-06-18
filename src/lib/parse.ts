@@ -70,7 +70,7 @@ function tokenize(input: string): Token[] {
     } else if (ch === ')') {
       tokens.push({ kind: 'rparen', span: { start, end: i + 1 } });
       i++;
-    } else if (ch === '!' || ch === "'") {
+    } else if (ch === "'") {
       tokens.push({ kind: 'not', span: { start, end: i + 1 } });
       i++;
     } else if (ch === '*' || ch === '.' || ch === '·' || ch === '&') {
