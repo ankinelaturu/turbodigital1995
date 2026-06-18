@@ -94,9 +94,9 @@ function drawGateStroke(
 
   if (mode === 'glow' || mode === 'halo') {
     const halos: { width: number; color: string }[] = [
-      { width: 14, color: COLORS.gateActiveHaloOuter },
-      { width: 9, color: COLORS.gateActiveHalo },
-      { width: 5, color: 'rgba(255, 100, 100, 0.7)' },
+      { width: 3.5, color: COLORS.gateActiveHaloOuter },
+      { width: 2.25, color: COLORS.gateActiveHalo },
+      { width: 1.125, color: 'rgba(255, 100, 100, 0.45)' },
     ];
     for (const halo of halos) {
       ctx.strokeStyle = halo.color;
