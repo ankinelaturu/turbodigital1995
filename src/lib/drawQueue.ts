@@ -1,5 +1,4 @@
-import type { CircuitLayout, Point } from './types';
-import type { GateLayout } from './types';
+import type { CircuitLayout, GateLayout, Point, WireLayout } from './types';
 import { DEBUG, DRAW_SPEED, LAYOUT, OUTPUT_NAME } from './types';
 import { orGateBezierCurves } from './bezier';
 import { buildGatePins, inputPinStrokes } from './gateGeometry';
@@ -276,6 +275,15 @@ function wireStrokesWithJumpers(
   return strokes;
 }
 
+function strokesForWire(wire: WireLayout): Stroke[] {
+  const strokes: Stroke[] = [];
+  for (const seg of wire.segments) {
+    const [a, b] = seg.points;
+    strokes.push(...wireSegmentStrokes(a, b, seg.jumpers));
+  }
+  return strokes;
+}
+
 export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
   strokeId = 0;
   const strokes: Stroke[] = [];
@@ -311,15 +319,17 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
     });
   }
 
-  for (const wire of layout.wires) {
-    for (const seg of wire.segments) {
-      const [a, b] = seg.points;
-      strokes.push(...wireSegmentStrokes(a, b, seg.jumpers));
-    }
-  }
+  const gateById = new Map(layout.gates.map((g) => [g.id, g]));
+  const wireById = new Map(layout.wires.map((w) => [w.id, w]));
 
-  for (const gate of layout.gates) {
-    strokes.push(...gateStrokes(gate));
+  for (const step of layout.drawSteps) {
+    if (step.type === 'wire') {
+      const wire = wireById.get(step.id);
+      if (wire) strokes.push(...strokesForWire(wire));
+    } else {
+      const gate = gateById.get(step.id);
+      if (gate) strokes.push(...gateStrokes(gate));
+    }
   }
 
   strokes.push({

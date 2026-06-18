@@ -89,12 +89,19 @@ export interface LabelLayout {
   y: number;
 }
 
+/** Pen order after rails: wires and gates interleaved in evaluation order. */
+export type DrawStep =
+  | { type: 'wire'; id: string }
+  | { type: 'gate'; id: string };
+
 export interface CircuitLayout {
   variables: string[];
   rails: RailLayout[];
   gates: GateLayout[];
   wires: WireLayout[];
   labels: LabelLayout[];
+  /** Evaluation-order sequence of wires and gates to animate */
+  drawSteps: DrawStep[];
   output: Point;
   width: number;
   height: number;

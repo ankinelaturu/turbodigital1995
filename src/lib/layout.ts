@@ -2,6 +2,7 @@ import type { AST } from './parse';
 import { collectVariables, formatExpression } from './parse';
 import type {
   CircuitLayout,
+  DrawStep,
   GateLayout,
   GateType,
   LabelLayout,
@@ -17,6 +18,7 @@ interface NodeResult {
   point: Point;
   gates: GateLayout[];
   wires: WireLayout[];
+  drawSteps: DrawStep[];
   /** Deepest gate layer in this subtree; 0 for a bare variable */
   depth: number;
 }
@@ -118,7 +120,7 @@ function layoutNode(
       const x = railX(col);
       const y = yCursor.value;
       yCursor.value += LAYOUT.rowStep;
-      return { point: { x, y }, gates: [], wires: [], depth: 0 };
+      return { point: { x, y }, gates: [], wires: [], drawSteps: [], depth: 0 };
     }
     case 'not': {
       const child = layoutNode(ast.child, railColumns, gateZoneStartX, yCursor);
@@ -128,15 +130,14 @@ function layoutNode(
       const pins = buildGatePins('NOT', bodyX, 0, gateY);
       const wires = [...child.wires];
 
-      wires.push(
-        makeOrthogonalWireToGate(
-          child.point,
-          pins.inputOuter[0].x,
-          pins.inputOuter[0].y,
-          railColumns,
-          ast.child.type === 'var' ? ast.child.name : undefined,
-        ),
+      const inputWire = makeOrthogonalWireToGate(
+        child.point,
+        pins.inputOuter[0].x,
+        pins.inputOuter[0].y,
+        railColumns,
+        ast.child.type === 'var' ? ast.child.name : undefined,
       );
+      wires.push(inputWire);
 
       const gate: GateLayout = {
         id: nextGateId(),
@@ -154,6 +155,11 @@ function layoutNode(
         point: pins.outputOuter,
         gates: [...child.gates, gate],
         wires,
+        drawSteps: [
+          ...child.drawSteps,
+          { type: 'wire', id: inputWire.id },
+          { type: 'gate', id: gate.id },
+        ],
         depth,
       };
     }
@@ -179,24 +185,21 @@ function layoutNode(
       const upperVar = left.point.y <= right.point.y ? leftVar : rightVar;
       const lowerVar = left.point.y <= right.point.y ? rightVar : leftVar;
 
-      wires.push(
-        makeOrthogonalWireToGate(
-          upperFrom,
-          pins.inputOuter[0].x,
-          pins.inputOuter[0].y,
-          railColumns,
-          upperVar,
-        ),
+      const upperWire = makeOrthogonalWireToGate(
+        upperFrom,
+        pins.inputOuter[0].x,
+        pins.inputOuter[0].y,
+        railColumns,
+        upperVar,
       );
-      wires.push(
-        makeOrthogonalWireToGate(
-          lowerFrom,
-          pins.inputOuter[1].x,
-          pins.inputOuter[1].y,
-          railColumns,
-          lowerVar,
-        ),
+      const lowerWire = makeOrthogonalWireToGate(
+        lowerFrom,
+        pins.inputOuter[1].x,
+        pins.inputOuter[1].y,
+        railColumns,
+        lowerVar,
       );
+      wires.push(upperWire, lowerWire);
 
       const gate: GateLayout = {
         id: nextGateId(),
@@ -214,6 +217,13 @@ function layoutNode(
         point: pins.outputOuter,
         gates: [...left.gates, ...right.gates, gate],
         wires,
+        drawSteps: [
+          ...left.drawSteps,
+          ...right.drawSteps,
+          { type: 'wire', id: upperWire.id },
+          { type: 'wire', id: lowerWire.id },
+          { type: 'gate', id: gate.id },
+        ],
         depth,
       };
     }
@@ -254,7 +264,7 @@ export function buildLayout(ast: AST): CircuitLayout {
   const outputX = result.point.x + 60;
   const output: Point = { x: outputX, y: result.point.y };
 
-  wires.push({
+  const outputWire: WireLayout = {
     id: nextWireId(),
     segments: [
       {
@@ -262,7 +272,13 @@ export function buildLayout(ast: AST): CircuitLayout {
         jumpers: [],
       },
     ],
-  });
+  };
+  wires.push(outputWire);
+
+  const drawSteps: DrawStep[] = [
+    ...result.drawSteps,
+    { type: 'wire', id: outputWire.id },
+  ];
 
   const width = outputX + 80;
   const height = yBottom + 60;
@@ -273,6 +289,7 @@ export function buildLayout(ast: AST): CircuitLayout {
     gates,
     wires,
     labels,
+    drawSteps,
     output,
     width,
     height,
