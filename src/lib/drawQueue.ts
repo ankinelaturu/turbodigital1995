@@ -1,6 +1,6 @@
 import type { CircuitLayout, Point } from './types';
 import type { GateLayout } from './types';
-import { DEBUG, LAYOUT, OUTPUT_NAME } from './types';
+import { DEBUG, DRAW_SPEED, LAYOUT, OUTPUT_NAME } from './types';
 import { orGateBezierCurves } from './bezier';
 import { buildGatePins, inputPinStrokes } from './gateGeometry';
 
@@ -26,6 +26,10 @@ let strokeId = 0;
 
 function sid(): string {
   return `s${strokeId++}`;
+}
+
+function animMs(ms: number): number {
+  return Math.max(35, Math.round(ms / DRAW_SPEED));
 }
 
 function dist(a: Point, b: Point): number {
@@ -55,20 +59,19 @@ function addLineStroke(
     kind: 'line',
     phase: 'gate',
     points: [a, b],
-    durationMs: dur,
+    durationMs: animMs(dur),
   });
 }
 
 function gateStrokes(gate: GateLayout): Stroke[] {
   const strokes: Stroke[] = [];
-  const dur = 280;
-  const pinDur = dur * 0.25;
+  const gateDur = 280;
   const centerY = gate.type === 'NOT' ? gate.outputY : undefined;
   const pins = buildGatePins(gate.type, gate.x, gate.y, centerY);
   const { body } = pins;
 
   for (const { outer, inner } of inputPinStrokes(pins)) {
-    addLineStroke(strokes, outer, inner, pinDur);
+    addLineStroke(strokes, outer, inner, gateDur * 0.25);
   }
 
   switch (gate.type) {
@@ -86,7 +89,7 @@ function gateStrokes(gate: GateLayout): Stroke[] {
           { x: body.x, y: body.y + h },
           { x: body.x, y: body.y },
         ],
-        durationMs: dur,
+        durationMs: animMs(gateDur),
       });
       const bx = body.x + triW + 4;
       const by = body.y + h / 2;
@@ -96,9 +99,9 @@ function gateStrokes(gate: GateLayout): Stroke[] {
         phase: 'gate',
         points: [],
         arc: { cx: bx, cy: by, r: 5, start: 0, end: Math.PI * 2 },
-        durationMs: 200,
+        durationMs: animMs(200),
       });
-      addLineStroke(strokes, pins.outputInner, pins.outputOuter, pinDur);
+      addLineStroke(strokes, pins.outputInner, pins.outputOuter, gateDur * 0.25);
       break;
     }
     case 'AND': {
@@ -116,7 +119,7 @@ function gateStrokes(gate: GateLayout): Stroke[] {
           { x: left, y: top },
           { x: left, y: bottom },
         ],
-        durationMs: dur * 0.4,
+        durationMs: animMs(gateDur * 0.4),
       });
       strokes.push({
         id: sid(),
@@ -126,7 +129,7 @@ function gateStrokes(gate: GateLayout): Stroke[] {
           { x: left, y: top },
           { x: arcCx, y: top },
         ],
-        durationMs: dur * 0.2,
+        durationMs: animMs(gateDur * 0.2),
       });
       strokes.push({
         id: sid(),
@@ -136,7 +139,7 @@ function gateStrokes(gate: GateLayout): Stroke[] {
           { x: left, y: bottom },
           { x: arcCx, y: bottom },
         ],
-        durationMs: dur * 0.2,
+        durationMs: animMs(gateDur * 0.2),
       });
       strokes.push({
         id: sid(),
@@ -150,14 +153,14 @@ function gateStrokes(gate: GateLayout): Stroke[] {
           start: -Math.PI / 2,
           end: Math.PI / 2,
         },
-        durationMs: dur * 0.6,
+        durationMs: animMs(gateDur * 0.6),
       });
-      addLineStroke(strokes, pins.outputInner, pins.outputOuter, pinDur);
+      addLineStroke(strokes, pins.outputInner, pins.outputOuter, gateDur * 0.25);
       break;
     }
     case 'OR': {
       const curves = orGateBezierCurves(body.x, body.y, body.w, body.h);
-      const curveDur = dur * 0.85;
+      const curveDur = animMs(gateDur * 0.85);
       strokes.push({
         id: sid(),
         kind: 'polyline',
@@ -179,7 +182,7 @@ function gateStrokes(gate: GateLayout): Stroke[] {
         points: curves.bottom,
         durationMs: curveDur,
       });
-      addLineStroke(strokes, pins.outputInner, pins.outputOuter, pinDur);
+      addLineStroke(strokes, pins.outputInner, pins.outputOuter, gateDur * 0.25);
       break;
     }
   }
@@ -201,7 +204,7 @@ function wireSegmentStrokes(
       kind: 'line',
       phase: 'wire',
       points: [a, b],
-      durationMs: 200 + len * 1.2,
+      durationMs: animMs(200 + len * 1.2),
     },
   ];
 }
@@ -236,7 +239,7 @@ function wireStrokesWithJumpers(
         { x: x1, y },
         { x: x2, y },
       ],
-      durationMs: 200 + Math.abs(x2 - x1) * 1.2,
+      durationMs: animMs(200 + Math.abs(x2 - x1) * 1.2),
     });
   };
 
@@ -253,7 +256,7 @@ function wireStrokesWithJumpers(
         start: Math.PI,
         end: 0,
       },
-      durationMs: 220,
+      durationMs: animMs(220),
     });
   };
 
@@ -291,7 +294,7 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
       phase: 'label',
       points: [{ x: label.x, y: label.y }],
       text: label.text,
-      durationMs: 400,
+      durationMs: animMs(400),
     });
   }
 
@@ -304,7 +307,7 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
         { x: rail.x, y: rail.yTop },
         { x: rail.x, y: rail.yBottom },
       ],
-      durationMs: 500 + (rail.yBottom - rail.yTop) * 0.8,
+      durationMs: animMs(500 + (rail.yBottom - rail.yTop) * 0.8),
     });
   }
 
@@ -325,7 +328,7 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
     phase: 'output',
     points: [{ x: layout.output.x + 8, y: layout.output.y + 5 }],
     text: OUTPUT_NAME,
-    durationMs: 350,
+    durationMs: animMs(350),
   });
 
   return strokes;

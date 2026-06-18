@@ -22,6 +22,9 @@ export const DEBUG = {
 /** Circuit output terminal and truth-table column (not an input rail). */
 export const OUTPUT_NAME = 'Z';
 
+/** Values > 1 make pen strokes finish faster (2 = twice as fast). */
+export const DRAW_SPEED = 2;
+
 export const LAYOUT = {
   marginX: 60,
   marginY: 70,
