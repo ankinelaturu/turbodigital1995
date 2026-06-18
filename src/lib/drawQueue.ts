@@ -16,6 +16,8 @@ export interface Stroke {
     r: number;
     start: number;
     end: number;
+    /** When set, overrides default canvas arc winding (jumpers use CCW for upward hump). */
+    ccw?: boolean;
   };
   text?: string;
   durationMs: number;
@@ -253,7 +255,8 @@ function wireStrokesWithJumpers(
         cy: y,
         r,
         start: Math.PI,
-        end: 0,
+        end: Math.PI * 2,
+        ccw: false,
       },
       durationMs: animMs(220),
     });

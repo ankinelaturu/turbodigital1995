@@ -52,8 +52,9 @@ export function drawStroke(
       const partial = len * t;
       const angleProgress = partial / len;
       const endAngle = a.start + (a.end - a.start) * angleProgress;
+      const ccw = a.ccw ?? a.end < a.start;
       ctx.beginPath();
-      ctx.arc(a.cx, a.cy, a.r, a.start, endAngle, a.end < a.start);
+      ctx.arc(a.cx, a.cy, a.r, a.start, endAngle, ccw);
       ctx.stroke();
       break;
     }

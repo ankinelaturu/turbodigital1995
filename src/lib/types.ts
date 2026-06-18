@@ -40,7 +40,7 @@ export const LAYOUT = {
   gateWireStub: 20,
   /** Horizontal gap between the rightmost rail and the first gate column */
   railToGateGap: 50,
-  jumperRadius: 10,
+  jumperRadius: 5,
   labelOffsetY: -28,
   railTop: 50,
 };
