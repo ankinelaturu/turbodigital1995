@@ -219,8 +219,8 @@ function layoutNode(
         wires,
         drawSteps: [
           ...left.drawSteps,
-          ...right.drawSteps,
           { type: 'wire', id: upperWire.id },
+          ...right.drawSteps,
           { type: 'wire', id: lowerWire.id },
           { type: 'gate', id: gate.id },
         ],
