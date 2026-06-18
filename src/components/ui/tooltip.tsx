@@ -1,8 +1,14 @@
+/**
+ * shadcn-style tooltip primitives and a cursor-following tooltip for gate hovers.
+ */
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { cn } from '@/lib/utils';
 
+/**
+ * Shared CRT-styled surface classes for tooltip content.
+ */
 export const tooltipSurfaceClass =
   'w-fit max-w-xs rounded border border-[#1a3a1a] bg-[#0a100a] px-2.5 py-1.5 font-mono text-xs leading-snug text-[#39ff14] shadow-[0_0_12px_rgba(57,255,20,0.25)]';
 
@@ -58,7 +64,9 @@ interface CursorTooltipProps {
   offset?: { x: number; y: number };
 }
 
-/** Tooltip that tracks pointer position (shadcn surface styling). */
+/**
+ * Tooltip that tracks pointer position (shadcn surface styling).
+ */
 function CursorTooltip({
   open,
   x,

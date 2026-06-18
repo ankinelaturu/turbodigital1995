@@ -9,11 +9,17 @@
  */
 import { OUTPUT_NAME } from './types';
 
+/**
+ * Character range in the source expression (re-exported for consumers).
+ */
 export interface SourceSpan {
   start: number;
   end: number;
 }
 
+/**
+ * Parsed boolean expression tree. Each node carries a `SourceSpan` for highlighting.
+ */
 export type AST =
   | { type: 'var'; name: string; span: SourceSpan }
   | { type: 'not'; child: AST; span: SourceSpan }
@@ -21,6 +27,9 @@ export type AST =
   | { type: 'xor'; left: AST; right: AST; span: SourceSpan }
   | { type: 'or'; left: AST; right: AST; span: SourceSpan };
 
+/**
+ * Thrown when tokenization or parsing fails.
+ */
 export class ParseError extends Error {
   constructor(message: string) {
     super(message);
@@ -53,7 +62,9 @@ function readKeyword(
   return null;
 }
 
-/** Lex the input string; rejects `Z` as an input variable. */
+/**
+ * Lex the input string; rejects `Z` as an input variable.
+ */
 function tokenize(input: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
@@ -116,7 +127,9 @@ function tokenize(input: string): Token[] {
   return tokens;
 }
 
-/** Entry point — returns the root AST or throws `ParseError`. */
+/**
+ * Entry point — returns the root AST or throws `ParseError`.
+ */
 export function parse(expr: string): AST {
   const tokens = tokenize(expr);
   if (tokens.length === 0) throw new ParseError('Empty expression');
@@ -170,7 +183,9 @@ function parseAnd(tokens: Token[]): [AST, Token[]] {
       };
       rest = afterRight;
     } else if (rest[0].kind === 'var' || rest[0].kind === 'not' || rest[0].kind === 'lparen') {
-      // Implicit AND: `A B` or `A(B+C)` without an explicit operator
+      /**
+       * Implicit AND: `A B` or `A(B+C)` without an explicit operator.
+       */
       const [right, afterRight] = parseUnary(rest);
       left = {
         type: 'and',
@@ -238,6 +253,9 @@ function parsePrimary(tokens: Token[]): [AST, Token[]] {
   throw new ParseError('Expected variable or parenthesis');
 }
 
+/**
+ * Collect sorted input variable names from an AST (excludes `Z`).
+ */
 export function collectVariables(ast: AST): string[] {
   const set = new Set<string>();
   walk(ast, set);
@@ -245,7 +263,9 @@ export function collectVariables(ast: AST): string[] {
   return [...set].sort();
 }
 
-/** Display string for tooltips (middle-dot AND, ^ XOR, + OR, postfix NOT). */
+/**
+ * Display string for tooltips (middle-dot AND, ^ XOR, + OR, postfix NOT).
+ */
 export function formatExpression(
   ast: AST,
   parent?: 'and' | 'xor' | 'or',

@@ -3,7 +3,9 @@
  */
 import type { Point } from './types';
 
-/** Cubic Bezier: B(t) with control points p0, p1, p2, p3 */
+/**
+ * Cubic Bezier: B(t) with control points p0, p1, p2, p3.
+ */
 export function cubicBezierPoint(
   p0: Point,
   p1: Point,
@@ -22,7 +24,9 @@ export function cubicBezierPoint(
   };
 }
 
-/** Sample a cubic Bezier into a LINE_STRIP-style vertex list (inclusive endpoints). */
+/**
+ * Sample a cubic Bezier into a LINE_STRIP-style vertex list (inclusive endpoints).
+ */
 export function sampleCubicBezier(
   p0: Point,
   p1: Point,
@@ -37,7 +41,9 @@ export function sampleCubicBezier(
   return points;
 }
 
-/** OR gate outline as three cubic Beziers (back, top, bottom). */
+/**
+ * OR gate outline as three cubic Beziers (back, top, bottom).
+ */
 function orGateBackControls(x: number, y: number, w: number, h: number) {
   const leftX = x;
   const backBulge = Math.max(10, w * 0.27);
@@ -49,7 +55,9 @@ function orGateBackControls(x: number, y: number, w: number, h: number) {
   };
 }
 
-/** X on the OR back curve at pin height (input leads meet the bulging left edge). */
+/**
+ * X on the OR back curve at pin height (input leads meet the bulging left edge).
+ */
 export function orGateBackXAtY(
   x: number,
   y: number,
@@ -70,6 +78,9 @@ export function orGateBackXAtY(
   return cubicBezierPoint(p0, p1, p2, p3, t).x;
 }
 
+/**
+ * Sampled polylines for the OR gate body (back bulge, top edge, bottom edge).
+ */
 export function orGateBezierCurves(
   x: number,
   y: number,
@@ -86,8 +97,10 @@ export function orGateBezierCurves(
 
   const back = sampleCubicBezier(p0, p1, p2, p3, 32);
 
-  // Outer edges: leave left nearly horizontal (P1 collinear with corner), bow outward
-  // in the second half (P2), then ease into the fixed output tip (rounded nose).
+  /**
+   * Outer edges: leave left nearly horizontal (P1 collinear with corner), bow outward
+   * in the second half (P2), then ease into the fixed output tip (rounded nose).
+   */
   const top = sampleCubicBezier(
     topLeft,
     { x: leftX + w * 0.5, y: topLeft.y },
@@ -107,7 +120,9 @@ export function orGateBezierCurves(
   return { back, top, bottom };
 }
 
-/** XOR: OR body plus a second back arc to the left with a narrow gap. */
+/**
+ * XOR: OR body plus a second back arc to the left with a narrow gap.
+ */
 export function xorGateBezierCurves(
   x: number,
   y: number,

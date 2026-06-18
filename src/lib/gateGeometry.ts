@@ -6,9 +6,14 @@ import { LAYOUT, type GateType, type Point } from './types';
 import type { GateLayout } from './types';
 import { orGateBackXAtY, xorGateBezierCurves } from './bezier';
 
-/** Short lead length drawn as part of the gate symbol; external wires attach here. */
+/**
+ * Short lead length drawn as part of the gate symbol; external wires attach here.
+ */
 export const GATE_PIN_LENGTH = 10;
 
+/**
+ * Axis-aligned rectangle for a gate body (excluding pin leads).
+ */
 export interface GateBodyRect {
   x: number;
   y: number;
@@ -16,6 +21,9 @@ export interface GateBodyRect {
   h: number;
 }
 
+/**
+ * Pin endpoints and body bounds for one gate instance.
+ */
 export interface GatePins {
   body: GateBodyRect;
   inputOuter: Point[];
@@ -24,6 +32,9 @@ export interface GatePins {
   outputOuter: Point;
 }
 
+/**
+ * Y coordinates for upper and lower input pins on dual-input gates.
+ */
 export function dualInputPinYs(bodyY: number, bodyH: number): [number, number] {
   return [bodyY + bodyH / 3, bodyY + (2 * bodyH) / 3];
 }
@@ -101,6 +112,9 @@ export function buildGatePins(
   }
 }
 
+/**
+ * Pairs of outer/inner points for each input pin lead stroke.
+ */
 export function inputPinStrokes(pins: GatePins): { outer: Point; inner: Point }[] {
   return pins.inputOuter.map((outer, i) => ({
     outer,
@@ -108,7 +122,9 @@ export function inputPinStrokes(pins: GatePins): { outer: Point; inner: Point }[
   }));
 }
 
-/** Axis-aligned hover target covering body and pin leads. */
+/**
+ * Axis-aligned hover target covering body and pin leads.
+ */
 export function gateHitBounds(gate: GateLayout): { x: number; y: number; w: number; h: number } {
   const centerY = gate.type === 'NOT' ? gate.outputY : undefined;
   const pins = buildGatePins(gate.type, gate.x, gate.y, centerY);

@@ -31,6 +31,9 @@ import {
 import { paintSimulation, type FlowEntry } from '../lib/simulationDraw';
 import { CursorTooltip } from '@/components/ui/tooltip';
 
+/**
+ * Props for the main circuit canvas component.
+ */
 interface CircuitCanvasProps {
   layout: CircuitLayout | null;
   ast: AST | null;
@@ -52,6 +55,9 @@ interface GateHover {
   sourceSpan: SourceSpan;
 }
 
+/**
+ * Main circuit canvas: pen-draw animation, then interactive simulation with switches.
+ */
 export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -115,7 +121,9 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
     setSimTick((t) => t + 1);
   }, [layout, ast]);
 
-  // Stable refs so the pen-draw effect does not re-run when simulation state updates
+  /**
+   * Stable refs so the pen-draw effect does not re-run when simulation state updates.
+   */
   const paintPenRef = useRef(paintPen);
   paintPenRef.current = paintPen;
   const paintSimRef = useRef(paintSim);
@@ -201,7 +209,9 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
       cancelAnimationFrame(animRef.current);
       cancelAnimationFrame(simAnimRef.current);
     };
-    // Only restart pen draw when layout or drawKey changes — not when simulation completes.
+    /**
+     * Only restart pen draw when layout or drawKey changes — not when simulation completes.
+     */
   }, [layout, drawKey]);
 
   useEffect(() => {

@@ -1,7 +1,15 @@
+/**
+ * Viewport scaling: letterbox circuit layout coordinates into the canvas element.
+ *
+ * `computeViewport` fits the layout bounding box inside the container; `paintWithViewport`
+ * clears the canvas, draws in layout space, then applies the CRT overlay.
+ */
 import { drawCRTOverlay } from './canvasDraw';
 import { COLORS } from './types';
 
-/** Screen-space mapping from layout coordinates to the full-size canvas. */
+/**
+ * Screen-space mapping from layout coordinates to the full-size canvas.
+ */
 export interface CanvasViewport {
   scale: number;
   offsetX: number;
@@ -10,6 +18,9 @@ export interface CanvasViewport {
   height: number;
 }
 
+/**
+ * Fit `layoutWidth` × `layoutHeight` inside the canvas, preserving aspect ratio.
+ */
 export function computeViewport(
   width: number,
   height: number,
@@ -26,6 +37,9 @@ export function computeViewport(
   };
 }
 
+/**
+ * Map one layout-space point to canvas pixel coordinates.
+ */
 export function layoutToScreen(
   vp: CanvasViewport,
   x: number,
@@ -34,7 +48,10 @@ export function layoutToScreen(
   return { x: vp.offsetX + x * vp.scale, y: vp.offsetY + y * vp.scale };
 }
 
-/** Clear the full canvas, draw circuit content in layout space, then CRT (+ optional overlay pass). */
+/**
+ * Clear the full canvas, draw circuit content in layout space, then CRT
+ * (and an optional overlay pass above the CRT, e.g. gate halos).
+ */
 export function paintWithViewport(
   ctx: CanvasRenderingContext2D,
   vp: CanvasViewport,

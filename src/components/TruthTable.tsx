@@ -1,4 +1,6 @@
-/** Scrollable 2^n truth table for the current expression's input variables. */
+/**
+ * Scrollable 2^n truth table for the current expression's input variables.
+ */
 import type { TruthTableRow } from '../lib/evaluate';
 import { OUTPUT_NAME } from '../lib/types';
 
@@ -7,6 +9,9 @@ interface TruthTableProps {
   rows: TruthTableRow[];
 }
 
+/**
+ * Render the truth table for the current expression's variables.
+ */
 export function TruthTable({ variables, rows }: TruthTableProps) {
   if (variables.length === 0) {
     return (

@@ -12,6 +12,9 @@ import { buildLayout } from './lib/layout';
 import type { CircuitLayout, SourceSpan } from './lib/types';
 import './App.css';
 
+/**
+ * Root application: expression input, circuit canvas, and truth table.
+ */
 function App() {
   const [expression, setExpression] = useState("S'·A+S·B");
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +48,9 @@ function App() {
 
   useEffect(() => {
     handleDraw();
-    // Initial demo draw only on mount
+    /**
+     * Initial demo draw only on mount.
+     */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

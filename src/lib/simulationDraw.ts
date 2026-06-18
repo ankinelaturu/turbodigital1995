@@ -11,6 +11,9 @@ import { paintWithViewport, type CanvasViewport } from './canvasViewport';
 import { gateStrokes, partialPolyline } from './drawQueue';
 import { segmentKey, type SimulationState } from './simulate';
 
+/**
+ * In-flight flow animation state for one wire segment.
+ */
 export interface FlowEntry {
   progress: number;
   direction: 'on' | 'off';
@@ -18,7 +21,9 @@ export interface FlowEntry {
 
 type SegmentVisual = 'on' | 'off' | { flow: number; direction: 'on' | 'off' };
 
-/** Merge steady-state segment activity with in-flight flow animation progress. */
+/**
+ * Merge steady-state segment activity with in-flight flow animation progress.
+ */
 function resolveSegmentVisual(
   key: string,
   sim: SimulationState,

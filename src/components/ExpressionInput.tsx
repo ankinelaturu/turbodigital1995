@@ -1,15 +1,21 @@
-/** Expression field, example presets dropdown, and Draw trigger. */
+/**
+ * Expression field, example presets dropdown, and Draw trigger.
+ */
 import { useEffect, useRef, useState } from 'react';
 import { OUTPUT_NAME, type SourceSpan } from '../lib/types';
 
 export interface PresetExpression {
   label: string;
   expr: string;
-  /** Longer description shown as a subtitle in the dropdown */
+  /**
+   * Longer description shown as a subtitle in the dropdown.
+   */
   hint?: string;
 }
 
-/** Example expressions available from the input dropdown. */
+/**
+ * Example expressions available from the input dropdown.
+ */
 export const PRESETS: PresetExpression[] = [
   { label: 'A+B+C', expr: 'A+B+C' },
   { label: 'A·B + C', expr: 'A·B+C' },
@@ -41,12 +47,18 @@ interface ExpressionInputProps {
   highlightSpan?: SourceSpan | null;
 }
 
+/**
+ * Clamp a highlight span to the current expression length.
+ */
 function clampSpan(value: string, span: SourceSpan): SourceSpan {
   const start = Math.max(0, Math.min(span.start, value.length));
   const end = Math.max(start, Math.min(span.end, value.length));
   return { start, end };
 }
 
+/**
+ * Expression input with syntax highlighting, examples dropdown, and Draw button.
+ */
 export function ExpressionInput({
   value,
   onChange,

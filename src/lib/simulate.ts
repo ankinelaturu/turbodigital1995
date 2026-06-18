@@ -8,20 +8,29 @@ import type { AST } from './parse';
 import { evaluate } from './evaluate';
 import type { CircuitLayout } from './types';
 
-/** Stable id for a wire segment — used for flow-animation deltas. */
+/**
+ * Stable id for a wire segment — used for flow-animation deltas.
+ */
 export function segmentKey(wireId: string, segIndex: number): string {
   return `${wireId}:${segIndex}`;
 }
 
+/**
+ * Lit rails, wire segments, gates, and the Z output for one input assignment.
+ */
 export interface SimulationState {
   output: boolean;
   activeRails: Set<string>;
   activeSegments: Set<string>;
-  /** Gate ids whose evaluated output is HIGH */
+  /**
+   * Gate ids whose evaluated output is HIGH.
+   */
   activeGates: Set<string>;
 }
 
-/** Post-order gate list — index *i* aligns with `layout.gates[i]`. */
+/**
+ * Post-order gate list — index *i* aligns with `layout.gates[i]`.
+ */
 function collectGateAsts(ast: AST): AST[] {
   switch (ast.type) {
     case 'var':
@@ -35,7 +44,9 @@ function collectGateAsts(ast: AST): AST[] {
   }
 }
 
-/** Evaluate all gate outputs and derive lit rails, wires, and active gate ids. */
+/**
+ * Evaluate all gate outputs and derive lit rails, wires, and active gate ids.
+ */
 export function computeSimulation(
   ast: AST,
   layout: CircuitLayout,
@@ -77,7 +88,9 @@ export function computeSimulation(
   return { output, activeRails, activeSegments, activeGates };
 }
 
-/** Diff active segment sets when inputs change — drives delta-only flow animation. */
+/**
+ * Diff active segment sets when inputs change — drives delta-only flow animation.
+ */
 export function segmentDelta(
   prev: Set<string>,
   next: Set<string>,
@@ -89,7 +102,9 @@ export function segmentDelta(
   return { added, removed };
 }
 
-/** All switches OFF — matches truth-table row 0. */
+/**
+ * All switches OFF — matches truth-table row 0.
+ */
 export function defaultInputs(variables: string[]): Record<string, boolean> {
   const inputs: Record<string, boolean> = {};
   for (const v of variables) inputs[v] = false;

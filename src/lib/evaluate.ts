@@ -5,6 +5,9 @@
  */
 import type { AST } from './parse';
 
+/**
+ * Evaluate the root expression (or any subtree) against input assignments.
+ */
 export function evaluate(ast: AST, env: Record<string, boolean>): boolean {
   switch (ast.type) {
     case 'var':
@@ -20,12 +23,17 @@ export function evaluate(ast: AST, env: Record<string, boolean>): boolean {
   }
 }
 
+/**
+ * One row of a truth table: input assignments and the resulting output.
+ */
 export interface TruthTableRow {
   inputs: Record<string, boolean>;
   output: boolean;
 }
 
-/** Enumerate all 2^n input combinations in standard truth-table order (MSB-first). */
+/**
+ * Enumerate all 2^n input combinations in standard truth-table order (MSB-first).
+ */
 export function buildTruthTable(ast: AST, variables: string[]): TruthTableRow[] {
   const n = variables.length;
   const rows: TruthTableRow[] = [];

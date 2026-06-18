@@ -9,8 +9,14 @@ import { DEBUG, DRAW_SPEED, LAYOUT, OUTPUT_NAME } from './types';
 import { orGateBezierCurves, xorGateBezierCurves } from './bezier';
 import { buildGatePins, inputPinStrokes } from './gateGeometry';
 
+/**
+ * Primitive geometry kinds used in the pen stroke queue.
+ */
 export type StrokeKind = 'line' | 'arc' | 'polyline' | 'text' | 'dot';
 
+/**
+ * One timed pen stroke in the draw animation queue.
+ */
 export interface Stroke {
   id: string;
   kind: StrokeKind;
@@ -22,7 +28,9 @@ export interface Stroke {
     r: number;
     start: number;
     end: number;
-    /** When set, overrides default canvas arc winding (jumpers use CCW for upward hump). */
+    /**
+     * When set, overrides default canvas arc winding (jumpers use CCW for upward hump).
+     */
     ccw?: boolean;
   };
   text?: string;
@@ -36,7 +44,9 @@ function sid(): string {
   return `s${strokeId++}`;
 }
 
-/** Scale base durations by `DRAW_SPEED`; floor keeps very short strokes visible. */
+/**
+ * Scale base durations by `DRAW_SPEED`; floor keeps very short strokes visible.
+ */
 function animMs(ms: number): number {
   return Math.max(35, Math.round(ms / DRAW_SPEED));
 }
@@ -45,6 +55,9 @@ function dist(a: Point, b: Point): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
+/**
+ * Total polyline length in layout pixels.
+ */
 export function pathLength(points: Point[]): number {
   let total = 0;
   for (let i = 1; i < points.length; i++) {
@@ -53,6 +66,9 @@ export function pathLength(points: Point[]): number {
   return total;
 }
 
+/**
+ * Arc length between two angles on a circle of radius `r`.
+ */
 export function arcLength(r: number, start: number, end: number): number {
   return r * Math.abs(end - start);
 }
@@ -72,7 +88,9 @@ function addLineStroke(
   });
 }
 
-/** Canvas strokes for one gate symbol — shared by pen draw and simulation paint. */
+/**
+ * Canvas strokes for one gate symbol — shared by pen draw and simulation paint.
+ */
 export function gateStrokes(gate: GateLayout): Stroke[] {
   const strokes: Stroke[] = [];
   const gateDur = 280;
@@ -281,7 +299,9 @@ function wireSegmentStrokes(
   ];
 }
 
-/** Split a horizontal wire at rail crossings into segments + upward jumper arcs (∩). */
+/**
+ * Split a horizontal wire at rail crossings into segments + upward jumper arcs (∩).
+ */
 function wireStrokesWithJumpers(
   a: Point,
   b: Point,
@@ -367,7 +387,9 @@ function strokesForWire(
   return strokes;
 }
 
-/** Turn a laid-out circuit into the timed stroke queue for pen animation. */
+/**
+ * Turn a laid-out circuit into the timed stroke queue for pen animation.
+ */
 export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
   strokeId = 0;
   const strokes: Stroke[] = [];
@@ -430,6 +452,9 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
   return strokes;
 }
 
+/**
+ * Point along an arc at parameter `t` ∈ [0, 1].
+ */
 export function pointOnArc(
   cx: number,
   cy: number,
@@ -442,7 +467,9 @@ export function pointOnArc(
   return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
 }
 
-/** Clip a polyline to `progress` along its total path length (pen animation). */
+/**
+ * Clip a polyline to `progress` along its total path length (pen animation).
+ */
 export function partialPolyline(points: Point[], progress: number): Point[] {
   if (points.length < 2) return points;
   const total = pathLength(points);

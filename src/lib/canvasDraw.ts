@@ -14,7 +14,9 @@ import { COLORS, LAYOUT } from '../lib/types';
 
 type GateDrawMode = 'flat' | 'glow' | 'halo';
 
-/** Draw a stroke path at progress `t` (0–1) for pen animation partial segments. */
+/**
+ * Draw a stroke path at progress `t` (0–1) for pen animation partial segments.
+ */
 function renderStrokePath(
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
@@ -117,6 +119,12 @@ function drawGateStroke(
   }
 }
 
+/**
+ * Draw one stroke at partial or full progress.
+ *
+ * Gates use red always; `gateGlow` adds a halo during pen draw.
+ * `dimWires` renders non-gate strokes in the off/dim phosphor palette.
+ */
 export function drawStroke(
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
@@ -161,6 +169,9 @@ export function drawStroke(
   renderStrokePath(ctx, stroke, t);
 }
 
+/**
+ * Draw a stroke at full progress (used for completed pen strokes and simulation gates).
+ */
 export function drawCompletedStroke(
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
@@ -170,7 +181,9 @@ export function drawCompletedStroke(
   drawStroke(ctx, stroke, 1, gateGlow, dimWires);
 }
 
-/** Halo-only pass for active gates — draw after CRT overlay so glow stays visible. */
+/**
+ * Halo-only pass for active gates — draw after CRT overlay so glow stays visible.
+ */
 export function drawGateHaloStroke(
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
@@ -179,6 +192,9 @@ export function drawGateHaloStroke(
   drawGateStroke(ctx, stroke, 1, 'halo');
 }
 
+/**
+ * Total path length of a stroke (used for pen animation timing).
+ */
 export function strokeTotalLength(stroke: Stroke): number {
   switch (stroke.kind) {
     case 'line':
@@ -194,7 +210,9 @@ export function strokeTotalLength(stroke: Stroke): number {
   }
 }
 
-/** Vignette + scanlines applied after the circuit is drawn. */
+/**
+ * Vignette + scanlines applied after the circuit is drawn.
+ */
 export function drawCRTOverlay(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   const grad = ctx.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.6);
   grad.addColorStop(0, 'rgba(0,0,0,0)');
