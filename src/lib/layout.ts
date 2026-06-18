@@ -172,7 +172,9 @@ function layoutNode(
       const inputX = gateInputX(gateZoneStartX, depth);
       const gateY = (left.point.y + right.point.y) / 2;
       const gateTop = gateY - LAYOUT.gateHeight / 2;
-      const gateBottom = gateY + LAYOUT.gateHeight / 2;
+      const h = LAYOUT.gateHeight;
+      const inputUpperY = gateTop + h / 3 - 4;
+      const inputLowerY = gateTop + (2 * h) / 3 + 4;
 
       const wires = [...left.wires, ...right.wires];
 
@@ -185,10 +187,10 @@ function layoutNode(
       const lowerVar = left.point.y <= right.point.y ? rightVar : leftVar;
 
       wires.push(
-        makeOrthogonalWireToGate(upperFrom, inputX, gateTop, railColumns, upperVar),
+        makeOrthogonalWireToGate(upperFrom, inputX, inputUpperY, railColumns, upperVar),
       );
       wires.push(
-        makeOrthogonalWireToGate(lowerFrom, inputX, gateBottom, railColumns, lowerVar),
+        makeOrthogonalWireToGate(lowerFrom, inputX, inputLowerY, railColumns, lowerVar),
       );
 
       const gateType: GateType = ast.type === 'and' ? 'AND' : 'OR';
@@ -197,7 +199,7 @@ function layoutNode(
         type: gateType,
         x: inputX,
         y: gateTop,
-        inputYs: [gateTop, gateBottom],
+        inputYs: [inputUpperY, inputLowerY],
         outputX: gateOutputX(depth, gateType, gateZoneStartX),
         outputY: gateY,
       };
