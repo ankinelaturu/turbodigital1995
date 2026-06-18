@@ -1,4 +1,5 @@
 import type { TruthTableRow } from '../lib/evaluate';
+import { OUTPUT_NAME } from '../lib/types';
 
 interface TruthTableProps {
   variables: string[];
@@ -25,7 +26,7 @@ export function TruthTable({ variables, rows }: TruthTableProps) {
               {variables.map((v) => (
                 <th key={v}>{v}</th>
               ))}
-              <th>F</th>
+              <th>{OUTPUT_NAME}</th>
             </tr>
           </thead>
           <tbody>

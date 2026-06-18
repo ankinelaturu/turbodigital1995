@@ -1,6 +1,6 @@
 import type { CircuitLayout, Point } from './types';
 import type { GateLayout } from './types';
-import { DEBUG, LAYOUT } from './types';
+import { DEBUG, LAYOUT, OUTPUT_NAME } from './types';
 import { orGateBezierCurves } from './bezier';
 import { buildGatePins, inputPinStrokes } from './gateGeometry';
 
@@ -324,7 +324,7 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
     kind: 'text',
     phase: 'output',
     points: [{ x: layout.output.x + 8, y: layout.output.y + 5 }],
-    text: 'F',
+    text: OUTPUT_NAME,
     durationMs: 350,
   });
 

@@ -1,3 +1,5 @@
+import { OUTPUT_NAME } from '../lib/types';
+
 export interface PresetExpression {
   label: string;
   expr: string;
@@ -68,7 +70,7 @@ export function ExpressionInput({ value, onChange, onDraw, error }: ExpressionIn
       </div>
 
       <p className="syntax-hint">
-        Use · for AND, + for OR, ' or ! for NOT. Variables: A–Z. Parentheses for grouping.
+        Use · for AND, + for OR, ' or ! for NOT. Inputs: A–Y; output is {OUTPUT_NAME}.
       </p>
     </section>
   );

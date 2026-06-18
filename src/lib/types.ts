@@ -19,6 +19,9 @@ export const DEBUG = {
   gatesOnly: false,
 };
 
+/** Circuit output terminal and truth-table column (not an input rail). */
+export const OUTPUT_NAME = 'Z';
+
 export const LAYOUT = {
   marginX: 60,
   marginY: 70,

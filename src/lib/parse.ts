@@ -1,3 +1,5 @@
+import { OUTPUT_NAME } from './types';
+
 export type AST =
   | { type: 'var'; name: string }
   | { type: 'not'; child: AST }
@@ -66,6 +68,11 @@ function tokenize(input: string): Token[] {
       while (i < input.length && /[A-Za-z0-9]/.test(input[i])) {
         name += input[i].toUpperCase();
         i++;
+      }
+      if (name === OUTPUT_NAME) {
+        throw new ParseError(
+          `${OUTPUT_NAME} is reserved for the circuit output; use A–Y as inputs`,
+        );
       }
       tokens.push({ kind: 'var', name });
     } else {
@@ -142,6 +149,7 @@ function parsePrimary(tokens: Token[]): [AST, Token[]] {
 export function collectVariables(ast: AST): string[] {
   const set = new Set<string>();
   walk(ast, set);
+  set.delete(OUTPUT_NAME);
   return [...set].sort();
 }
 
