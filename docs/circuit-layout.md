@@ -56,7 +56,7 @@ Horizontal wires run from rails (or prior gate outputs) into the gate zone befor
 
 Connections use **orthogonal routing** into each gate:
 
-1. Horizontal from source (rail or prior gate) to `gateInputX − 15px` (jumpers on crossed rails)
+1. Horizontal from source (rail or prior gate) to `gateInputX − 30px` (jumpers on crossed rails)
 2. Vertical at that column to the gate input height
 3. Short horizontal into the gate
 
@@ -125,7 +125,7 @@ Defined in `src/lib/types.ts` as `LAYOUT`:
 | `gateHeight` | 44 | AND/OR symbol height |
 | `notWidth` | 28 | NOT triangle width |
 | `notHeight` | 28 | NOT triangle height |
-| `gateWireStub` | 15 | Horizontal stop before gate; wire turns vertical then enters |
+| `gateWireStub` | 30 | Horizontal stop before gate; wire turns vertical then enters |
 | `rowStep` | 56 | Vertical spacing between tap points |
 | `jumperRadius` | 10 | Jumper arc radius |
 | `railTop` | 50 | Y where rails begin |

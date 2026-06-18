@@ -173,8 +173,8 @@ function layoutNode(
       const gateY = (left.point.y + right.point.y) / 2;
       const gateTop = gateY - LAYOUT.gateHeight / 2;
       const h = LAYOUT.gateHeight;
-      const inputUpperY = gateTop + h / 3 - 4;
-      const inputLowerY = gateTop + (2 * h) / 3 + 4;
+      const inputUpperY = gateTop + h / 3 - 2;
+      const inputLowerY = gateTop + (2 * h) / 3 + 2;
 
       const wires = [...left.wires, ...right.wires];
 

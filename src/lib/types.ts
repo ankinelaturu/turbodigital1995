@@ -23,7 +23,7 @@ export const LAYOUT = {
   rowStep: 56,
   wireStub: 18,
   /** Gap before gate input where wire turns vertical then enters horizontally */
-  gateWireStub: 15,
+  gateWireStub: 25,
   /** Horizontal gap between the rightmost rail and the first gate column */
   railToGateGap: 50,
   jumperRadius: 10,
