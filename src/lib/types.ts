@@ -26,6 +26,8 @@ export const COLORS = {
   outputOff: '#1a5f1a',
   outputOnGlow: 'rgba(57, 255, 20, 0.7)',
   outputOffGlow: 'rgba(13, 42, 13, 0.15)',
+  /** Z label inside output circle — black for contrast on on/off fill */
+  outputLabel: '#000000',
   /** Gate body + pins (debug contrast vs green wires) */
   gate: '#ff4444',
   gateGlow: 'rgba(255, 68, 68, 0.4)',

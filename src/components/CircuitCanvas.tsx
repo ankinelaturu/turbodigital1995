@@ -86,9 +86,9 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
       for (let i = 0; i < states.length; i++) {
         const s = states[i];
         if (s.done) {
-          drawCompletedStroke(ctx, s.stroke);
+          drawCompletedStroke(ctx, s.stroke, false, true);
         } else if (i === currentIndexRef.current) {
-          drawStroke(ctx, s.stroke, s.progress);
+          drawStroke(ctx, s.stroke, s.progress, false, true);
         }
       }
     });

@@ -10,7 +10,7 @@ import {
   partialPolyline,
   pathLength,
 } from '../lib/drawQueue';
-import { COLORS } from '../lib/types';
+import { COLORS, LAYOUT } from '../lib/types';
 
 type GateDrawMode = 'flat' | 'glow' | 'halo';
 
@@ -68,7 +68,10 @@ function renderStrokePath(
     case 'text': {
       if (t < 1) return;
       const p = stroke.points[0];
-      ctx.font = '600 18px "IBM Plex Mono", monospace';
+      ctx.font =
+        stroke.phase === 'output'
+          ? `700 ${LAYOUT.outputLabelSize}px "IBM Plex Mono", monospace`
+          : '600 18px "IBM Plex Mono", monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(stroke.text ?? '', p.x, p.y);
@@ -96,7 +99,7 @@ function drawGateStroke(
     const halos: { width: number; color: string }[] = [
       { width: 3.5, color: COLORS.gateActiveHaloOuter },
       { width: 2.25, color: COLORS.gateActiveHalo },
-      { width: 1.125, color: 'rgba(255, 100, 100, 0.45)' },
+      { width: 2.75, color: 'rgba(255, 100, 100, 0.45)' },
     ];
     for (const halo of halos) {
       ctx.strokeStyle = halo.color;
@@ -119,6 +122,7 @@ export function drawStroke(
   stroke: Stroke,
   progress: number,
   gateGlow = false,
+  dimWires = false,
 ): void {
   const isGate = stroke.phase === 'gate';
   const t = Math.min(1, Math.max(0, progress));
@@ -128,13 +132,32 @@ export function drawStroke(
     return;
   }
 
-  ctx.strokeStyle = COLORS.phosphor;
-  ctx.fillStyle = COLORS.phosphor;
-  ctx.shadowColor = COLORS.phosphorGlow;
-  ctx.shadowBlur = 4;
+  if (dimWires) {
+    ctx.strokeStyle = COLORS.phosphorDim;
+    ctx.fillStyle = COLORS.phosphorDim;
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+  } else {
+    ctx.strokeStyle = COLORS.phosphor;
+    ctx.fillStyle = COLORS.phosphor;
+    ctx.shadowColor = COLORS.phosphorGlow;
+    ctx.shadowBlur = 4;
+  }
   ctx.lineWidth = 1.5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+
+  if (stroke.kind === 'text') {
+    if (stroke.phase === 'label') {
+      ctx.fillStyle = COLORS.label;
+    } else if (stroke.phase === 'output') {
+      ctx.fillStyle = COLORS.outputLabel;
+    } else {
+      ctx.fillStyle = COLORS.phosphorDim;
+    }
+    ctx.shadowBlur = 0;
+  }
+
   renderStrokePath(ctx, stroke, t);
 }
 
@@ -142,8 +165,9 @@ export function drawCompletedStroke(
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
   gateGlow = false,
+  dimWires = false,
 ): void {
-  drawStroke(ctx, stroke, 1, gateGlow);
+  drawStroke(ctx, stroke, 1, gateGlow, dimWires);
 }
 
 /** Halo-only pass for active gates — draw after CRT overlay so glow stays visible. */

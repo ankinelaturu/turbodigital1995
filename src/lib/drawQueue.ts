@@ -422,7 +422,7 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
     id: sid(),
     kind: 'text',
     phase: 'output',
-    points: [{ x: layout.output.x + 8, y: layout.output.y + 5 }],
+    points: [{ x: layout.output.x, y: layout.output.y }],
     text: OUTPUT_NAME,
     durationMs: animMs(350),
   });

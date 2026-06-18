@@ -272,11 +272,12 @@ function drawOutput(
   ctx.fill();
 
   ctx.font = `700 ${LAYOUT.outputLabelSize}px "IBM Plex Mono", monospace`;
-  ctx.textAlign = 'left';
+  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = outputOn ? COLORS.phosphorOn : COLORS.phosphorDim;
-  ctx.shadowBlur = outputOn ? 10 : 3;
-  ctx.fillText(OUTPUT_NAME, x + r + 10, y);
+  ctx.fillStyle = COLORS.outputLabel;
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.fillText(OUTPUT_NAME, x, y);
 }
 
 /**
