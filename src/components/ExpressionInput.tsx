@@ -1,14 +1,15 @@
-/** Expression field, example presets, and Draw trigger. */
+/** Expression field, example presets dropdown, and Draw trigger. */
+import { useEffect, useRef, useState } from 'react';
 import { OUTPUT_NAME, type SourceSpan } from '../lib/types';
 
 export interface PresetExpression {
   label: string;
   expr: string;
-  /** Shown on hover — keeps chip text short */
+  /** Longer description shown as a subtitle in the dropdown */
   hint?: string;
 }
 
-/** One-click example expressions shown as chips below the input field. */
+/** Example expressions available from the input dropdown. */
 export const PRESETS: PresetExpression[] = [
   { label: 'A+B+C', expr: 'A+B+C' },
   { label: 'A·B + C', expr: 'A·B+C' },
@@ -53,8 +54,34 @@ export function ExpressionInput({
   error,
   highlightSpan,
 }: ExpressionInputProps) {
+  const [examplesOpen, setExamplesOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!examplesOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) {
+        setExamplesOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExamplesOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [examplesOpen]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') onDraw();
+  };
+
+  const selectPreset = (expr: string) => {
+    onChange(expr);
+    setExamplesOpen(false);
   };
 
   const span =
@@ -70,7 +97,7 @@ export function ExpressionInput({
       </header>
 
       <div className="input-row">
-        <div className="expr-field-wrap">
+        <div className="expr-field-wrap" ref={wrapRef}>
           <div className="expr-highlight-backdrop" aria-hidden>
             {span && (
               <>
@@ -90,6 +117,34 @@ export function ExpressionInput({
             spellCheck={false}
             aria-label="Boolean expression"
           />
+          <button
+            type="button"
+            className="expr-examples-trigger"
+            onClick={() => setExamplesOpen((open) => !open)}
+            aria-expanded={examplesOpen}
+            aria-haspopup="listbox"
+            aria-label="Example expressions"
+            title="Example expressions"
+          >
+            <span className="expr-examples-chevron" aria-hidden />
+          </button>
+          {examplesOpen && (
+            <ul className="expr-examples-menu" role="listbox" aria-label="Example expressions">
+              {PRESETS.map((p) => (
+                <li key={p.label} role="option">
+                  <button
+                    type="button"
+                    className="expr-examples-item"
+                    onClick={() => selectPreset(p.expr)}
+                    title={p.expr}
+                  >
+                    <span className="expr-examples-item-label">{p.label}</span>
+                    {p.hint && <span className="expr-examples-item-hint">{p.hint}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <button type="button" className="draw-btn" onClick={onDraw}>
           Draw
@@ -97,21 +152,6 @@ export function ExpressionInput({
       </div>
 
       {error && <p className="error-msg" role="alert">{error}</p>}
-
-      <div className="chips">
-        <span className="chips-label">Examples:</span>
-        {PRESETS.map((p) => (
-          <button
-            key={p.label}
-            type="button"
-            className="chip"
-            onClick={() => onChange(p.expr)}
-            title={p.hint ? `${p.hint}\n\n${p.expr}` : p.expr}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
 
       <p className="syntax-hint">
         Use · for AND, ^ for XOR, + for OR, ' for NOT. Inputs: A–Y; output is {OUTPUT_NAME}.

@@ -78,11 +78,6 @@ function App() {
         />
         <TruthTable variables={variables} rows={truthRows} />
       </main>
-
-      <footer className="footer">
-        <span>Phosphor green CRT mode</span>
-        <span>Draw → simulate with input switches</span>
-      </footer>
     </div>
   );
 }
