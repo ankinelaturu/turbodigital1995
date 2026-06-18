@@ -25,12 +25,12 @@ npm run dev
 
 Inputs are **A–Y**; **Z** is reserved for the circuit output terminal.
 
-| Operation | Symbol |
-|-----------|--------|
-| AND | `·` (middle dot); also juxtaposition (`AB` = `A·B`) |
-| OR | `+` |
-| XOR | `^` |
-| NOT | postfix `'` (e.g. `C'`) |
+| Operation | Symbol | Example |
+|-----------|--------|---------|
+| AND | `·` | `A·B` |
+| OR | `+` | `A+B` |
+| XOR | `^` | `A^B` |
+| NOT | postfix `'` | `C'` |
 
 Precedence (low → high): **OR**, **XOR**, **AND**, **NOT**. Parentheses override precedence.
 
