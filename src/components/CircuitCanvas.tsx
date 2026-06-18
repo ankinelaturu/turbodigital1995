@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CircuitLayout } from '../lib/types';
+import type { CircuitLayout, SourceSpan } from '../lib/types';
 import { COLORS } from '../lib/types';
 import { buildDrawQueue, type Stroke } from '../lib/drawQueue';
 import { drawCompletedStroke, drawCRTOverlay, drawStroke } from '../lib/canvasDraw';
@@ -9,6 +9,7 @@ import { CursorTooltip } from '@/components/ui/tooltip';
 interface CircuitCanvasProps {
   layout: CircuitLayout | null;
   drawKey: number;
+  onGateHover?: (hover: GateHover | null) => void;
 }
 
 interface StrokeState {
@@ -22,9 +23,10 @@ interface GateHover {
   expression: string;
   x: number;
   y: number;
+  sourceSpan: SourceSpan;
 }
 
-export function CircuitCanvas({ layout, drawKey }: CircuitCanvasProps) {
+export function CircuitCanvas({ layout, drawKey, onGateHover }: CircuitCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
@@ -66,6 +68,7 @@ export function CircuitCanvas({ layout, drawKey }: CircuitCanvasProps) {
     strokeStartRef.current = performance.now();
     setComplete(false);
     setGateHover(null);
+    onGateHover?.(null);
 
     const applySize = () => {
       const canvas = canvasRef.current;
@@ -119,9 +122,20 @@ export function CircuitCanvas({ layout, drawKey }: CircuitCanvasProps) {
     };
   }, [layout, drawKey, paint]);
 
-  const showGateTooltip = useCallback((gate: { type: string; expression: string }, x: number, y: number) => {
-    setGateHover({ type: gate.type, expression: gate.expression, x, y });
-  }, []);
+  const showGateTooltip = useCallback(
+    (gate: CircuitLayout['gates'][number], x: number, y: number) => {
+      const hover: GateHover = {
+        type: gate.type,
+        expression: gate.expression,
+        x,
+        y,
+        sourceSpan: gate.sourceSpan,
+      };
+      setGateHover(hover);
+      onGateHover?.(hover);
+    },
+    [onGateHover],
+  );
 
   const moveGateTooltip = useCallback((x: number, y: number) => {
     setGateHover((prev) => (prev ? { ...prev, x, y } : null));
@@ -129,7 +143,8 @@ export function CircuitCanvas({ layout, drawKey }: CircuitCanvasProps) {
 
   const hideGateTooltip = useCallback(() => {
     setGateHover(null);
-  }, []);
+    onGateHover?.(null);
+  }, [onGateHover]);
 
   const stageWidth = layout ? layout.width * displayScale : 0;
   const stageHeight = layout ? layout.height * displayScale : 0;

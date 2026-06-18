@@ -42,6 +42,11 @@ export const LAYOUT = {
   railTop: 50,
 };
 
+export interface SourceSpan {
+  start: number;
+  end: number;
+}
+
 export type GateType = 'NOT' | 'AND' | 'OR';
 
 export interface GateLayout {
@@ -54,6 +59,8 @@ export interface GateLayout {
   outputY: number;
   /** Boolean sub-expression this gate implements */
   expression: string;
+  /** Character range in the original input expression */
+  sourceSpan: SourceSpan;
 }
 
 export interface RailLayout {

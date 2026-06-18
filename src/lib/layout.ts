@@ -147,6 +147,7 @@ function layoutNode(
         outputX: pins.outputOuter.x,
         outputY: pins.outputOuter.y,
         expression: formatExpression(ast),
+        sourceSpan: ast.span,
       };
 
       return {
@@ -206,6 +207,7 @@ function layoutNode(
         outputX: pins.outputOuter.x,
         outputY: pins.outputOuter.y,
         expression: formatExpression(ast),
+        sourceSpan: ast.span,
       };
 
       return {

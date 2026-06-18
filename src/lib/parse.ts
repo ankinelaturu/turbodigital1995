@@ -1,10 +1,15 @@
 import { OUTPUT_NAME } from './types';
 
+export interface SourceSpan {
+  start: number;
+  end: number;
+}
+
 export type AST =
-  | { type: 'var'; name: string }
-  | { type: 'not'; child: AST }
-  | { type: 'and'; left: AST; right: AST }
-  | { type: 'or'; left: AST; right: AST };
+  | { type: 'var'; name: string; span: SourceSpan }
+  | { type: 'not'; child: AST; span: SourceSpan }
+  | { type: 'and'; left: AST; right: AST; span: SourceSpan }
+  | { type: 'or'; left: AST; right: AST; span: SourceSpan };
 
 export class ParseError extends Error {
   constructor(message: string) {
@@ -13,54 +18,66 @@ export class ParseError extends Error {
   }
 }
 
-function normalize(expr: string): string {
-  return expr
-    .replace(/\s+/g, '')
-    .replace(/·/g, '*')
-    .replace(/&/g, '*')
-    .replace(/\|/g, '+')
-    .replace(/NOT/gi, '!')
-    .replace(/AND/gi, '*')
-    .replace(/OR/gi, '+');
-}
-
-export function parse(expr: string): AST {
-  const tokens = tokenize(normalize(expr));
-  if (tokens.length === 0) throw new ParseError('Empty expression');
-  const [ast, rest] = parseOr(tokens);
-  if (rest.length > 0) {
-    throw new ParseError(`Unexpected token: ${rest[0]}`);
-  }
-  return ast;
-}
-
 type Token =
-  | { kind: 'var'; name: string }
-  | { kind: 'not' }
-  | { kind: 'and' }
-  | { kind: 'or' }
-  | { kind: 'lparen' }
-  | { kind: 'rparen' };
+  | { kind: 'var'; name: string; span: SourceSpan }
+  | { kind: 'not'; span: SourceSpan }
+  | { kind: 'and'; span: SourceSpan }
+  | { kind: 'or'; span: SourceSpan }
+  | { kind: 'lparen'; span: SourceSpan }
+  | { kind: 'rparen'; span: SourceSpan };
+
+function mergeSpan(a: SourceSpan, b: SourceSpan): SourceSpan {
+  return { start: a.start, end: b.end };
+}
+
+function readKeyword(
+  input: string,
+  i: number,
+): { kind: 'not' | 'and' | 'or'; len: number } | null {
+  const tail = input.slice(i);
+  if (/^NOT\b/i.test(tail)) return { kind: 'not', len: 3 };
+  if (/^AND\b/i.test(tail)) return { kind: 'and', len: 3 };
+  if (/^OR\b/i.test(tail)) return { kind: 'or', len: 2 };
+  return null;
+}
 
 function tokenize(input: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
+
   while (i < input.length) {
+    if (/\s/.test(input[i])) {
+      i++;
+      continue;
+    }
+
+    const keyword = readKeyword(input, i);
+    if (keyword) {
+      tokens.push({
+        kind: keyword.kind,
+        span: { start: i, end: i + keyword.len },
+      });
+      i += keyword.len;
+      continue;
+    }
+
     const ch = input[i];
+    const start = i;
+
     if (ch === '(') {
-      tokens.push({ kind: 'lparen' });
+      tokens.push({ kind: 'lparen', span: { start, end: i + 1 } });
       i++;
     } else if (ch === ')') {
-      tokens.push({ kind: 'rparen' });
+      tokens.push({ kind: 'rparen', span: { start, end: i + 1 } });
       i++;
     } else if (ch === '!' || ch === "'") {
-      tokens.push({ kind: 'not' });
+      tokens.push({ kind: 'not', span: { start, end: i + 1 } });
       i++;
-    } else if (ch === '*' || ch === '.') {
-      tokens.push({ kind: 'and' });
+    } else if (ch === '*' || ch === '.' || ch === '·' || ch === '&') {
+      tokens.push({ kind: 'and', span: { start, end: i + 1 } });
       i++;
-    } else if (ch === '+') {
-      tokens.push({ kind: 'or' });
+    } else if (ch === '+' || ch === '|') {
+      tokens.push({ kind: 'or', span: { start, end: i + 1 } });
       i++;
     } else if (/[A-Za-z]/.test(ch)) {
       let name = ch.toUpperCase();
@@ -74,20 +91,35 @@ function tokenize(input: string): Token[] {
           `${OUTPUT_NAME} is reserved for the circuit output; use A–Y as inputs`,
         );
       }
-      tokens.push({ kind: 'var', name });
+      tokens.push({ kind: 'var', name, span: { start, end: i } });
     } else {
       throw new ParseError(`Invalid character: ${ch}`);
     }
   }
+
   return tokens;
+}
+
+export function parse(expr: string): AST {
+  const tokens = tokenize(expr);
+  if (tokens.length === 0) throw new ParseError('Empty expression');
+  const [ast, rest] = parseOr(tokens);
+  if (rest.length > 0) {
+    throw new ParseError(`Unexpected token: ${rest[0].kind}`);
+  }
+  return ast;
 }
 
 function parseOr(tokens: Token[]): [AST, Token[]] {
   let [left, rest] = parseAnd(tokens);
   while (rest.length > 0 && rest[0].kind === 'or') {
-    const [, afterOr] = [rest[0], rest.slice(1)] as const;
-    const [right, afterRight] = parseAnd(afterOr);
-    left = { type: 'or', left, right };
+    const [right, afterRight] = parseAnd(rest.slice(1));
+    left = {
+      type: 'or',
+      left,
+      right,
+      span: mergeSpan(left.span, right.span),
+    };
     rest = afterRight;
   }
   return [left, rest];
@@ -98,11 +130,21 @@ function parseAnd(tokens: Token[]): [AST, Token[]] {
   while (rest.length > 0) {
     if (rest[0].kind === 'and') {
       const [right, afterRight] = parseUnary(rest.slice(1));
-      left = { type: 'and', left, right };
+      left = {
+        type: 'and',
+        left,
+        right,
+        span: mergeSpan(left.span, right.span),
+      };
       rest = afterRight;
     } else if (rest[0].kind === 'var' || rest[0].kind === 'not' || rest[0].kind === 'lparen') {
       const [right, afterRight] = parseUnary(rest);
-      left = { type: 'and', left, right };
+      left = {
+        type: 'and',
+        left,
+        right,
+        span: mergeSpan(left.span, right.span),
+      };
       rest = afterRight;
     } else {
       break;
@@ -114,8 +156,12 @@ function parseAnd(tokens: Token[]): [AST, Token[]] {
 function parseUnary(tokens: Token[]): [AST, Token[]] {
   if (tokens.length === 0) throw new ParseError('Expected operand');
   if (tokens[0].kind === 'not') {
+    const notSpan = tokens[0].span;
     const [child, rest] = parseUnary(tokens.slice(1));
-    return [{ type: 'not', child }, rest];
+    return [
+      { type: 'not', child, span: mergeSpan(notSpan, child.span) },
+      rest,
+    ];
   }
   return parsePrimaryWithPostfix(tokens);
 }
@@ -125,7 +171,11 @@ function parsePrimaryWithPostfix(tokens: Token[]): [AST, Token[]] {
   let node = primary;
   let rest = rest0;
   while (rest.length > 0 && rest[0].kind === 'not') {
-    node = { type: 'not', child: node };
+    node = {
+      type: 'not',
+      child: node,
+      span: mergeSpan(node.span, rest[0].span),
+    };
     rest = rest.slice(1);
   }
   return [node, rest];
@@ -134,14 +184,23 @@ function parsePrimaryWithPostfix(tokens: Token[]): [AST, Token[]] {
 function parsePrimary(tokens: Token[]): [AST, Token[]] {
   if (tokens.length === 0) throw new ParseError('Expected operand');
   if (tokens[0].kind === 'var') {
-    return [{ type: 'var', name: tokens[0].name }, tokens.slice(1)];
+    const token = tokens[0];
+    return [
+      { type: 'var', name: token.name, span: token.span },
+      tokens.slice(1),
+    ];
   }
   if (tokens[0].kind === 'lparen') {
+    const lparen = tokens[0].span;
     const [inner, rest] = parseOr(tokens.slice(1));
     if (rest.length === 0 || rest[0].kind !== 'rparen') {
       throw new ParseError('Missing closing parenthesis');
     }
-    return [inner, rest.slice(1)];
+    const rparen = rest[0].span;
+    return [
+      { ...inner, span: mergeSpan(lparen, rparen) },
+      rest.slice(1),
+    ];
   }
   throw new ParseError('Expected variable or parenthesis');
 }

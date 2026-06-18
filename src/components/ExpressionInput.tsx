@@ -1,4 +1,4 @@
-import { OUTPUT_NAME } from '../lib/types';
+import { OUTPUT_NAME, type SourceSpan } from '../lib/types';
 
 export interface PresetExpression {
   label: string;
@@ -22,12 +22,30 @@ interface ExpressionInputProps {
   onChange: (value: string) => void;
   onDraw: () => void;
   error: string | null;
+  highlightSpan?: SourceSpan | null;
 }
 
-export function ExpressionInput({ value, onChange, onDraw, error }: ExpressionInputProps) {
+function clampSpan(value: string, span: SourceSpan): SourceSpan {
+  const start = Math.max(0, Math.min(span.start, value.length));
+  const end = Math.max(start, Math.min(span.end, value.length));
+  return { start, end };
+}
+
+export function ExpressionInput({
+  value,
+  onChange,
+  onDraw,
+  error,
+  highlightSpan,
+}: ExpressionInputProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') onDraw();
   };
+
+  const span =
+    highlightSpan && highlightSpan.end > highlightSpan.start
+      ? clampSpan(value, highlightSpan)
+      : null;
 
   return (
     <section className="expression-input">
@@ -37,16 +55,27 @@ export function ExpressionInput({ value, onChange, onDraw, error }: ExpressionIn
       </header>
 
       <div className="input-row">
-        <input
-          type="text"
-          className="expr-field"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="e.g. A·B+C' or S'·A+S·B"
-          spellCheck={false}
-          aria-label="Boolean expression"
-        />
+        <div className="expr-field-wrap">
+          <div className="expr-highlight-backdrop" aria-hidden>
+            {span && (
+              <>
+                <span className="expr-highlight-ghost">{value.slice(0, span.start)}</span>
+                <mark className="expr-highlight-mark">{value.slice(span.start, span.end)}</mark>
+                <span className="expr-highlight-ghost">{value.slice(span.end)}</span>
+              </>
+            )}
+          </div>
+          <input
+            type="text"
+            className="expr-field"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="e.g. A·B+C' or S'·A+S·B"
+            spellCheck={false}
+            aria-label="Boolean expression"
+          />
+        </div>
         <button type="button" className="draw-btn" onClick={onDraw}>
           Draw
         </button>

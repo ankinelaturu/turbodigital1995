@@ -5,7 +5,7 @@ import { TruthTable } from './components/TruthTable';
 import { parse, ParseError, collectVariables } from './lib/parse';
 import { buildTruthTable } from './lib/evaluate';
 import { buildLayout } from './lib/layout';
-import type { CircuitLayout } from './lib/types';
+import type { CircuitLayout, SourceSpan } from './lib/types';
 import './App.css';
 
 function App() {
@@ -14,6 +14,7 @@ function App() {
   const [layout, setLayout] = useState<CircuitLayout | null>(null);
   const [drawKey, setDrawKey] = useState(0);
   const [ast, setAst] = useState<ReturnType<typeof parse> | null>(null);
+  const [highlightSpan, setHighlightSpan] = useState<SourceSpan | null>(null);
 
   const variables = useMemo(() => (ast ? collectVariables(ast) : []), [ast]);
   const truthRows = useMemo(
@@ -29,10 +30,12 @@ function App() {
       setLayout(built);
       setDrawKey((k) => k + 1);
       setError(null);
+      setHighlightSpan(null);
     } catch (e) {
       setError(e instanceof ParseError ? e.message : 'Invalid expression');
       setLayout(null);
       setAst(null);
+      setHighlightSpan(null);
     }
   }, [expression]);
 
@@ -46,13 +49,21 @@ function App() {
     <div className="app">
       <ExpressionInput
         value={expression}
-        onChange={setExpression}
+        onChange={(v) => {
+          setExpression(v);
+          setHighlightSpan(null);
+        }}
         onDraw={handleDraw}
         error={error}
+        highlightSpan={highlightSpan}
       />
 
       <main className="main-panels">
-        <CircuitCanvas layout={layout} drawKey={drawKey} />
+        <CircuitCanvas
+          layout={layout}
+          drawKey={drawKey}
+          onGateHover={(hover) => setHighlightSpan(hover?.sourceSpan ?? null)}
+        />
         <TruthTable variables={variables} rows={truthRows} />
       </main>
 
