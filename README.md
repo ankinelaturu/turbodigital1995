@@ -13,7 +13,7 @@ npm run dev
 
 ## Features
 
-- Parse Boolean expressions (`·`, `^`, `+`, `'`, parentheses; keywords `AND`, `OR`, `XOR`, `NOT`)
+- Parse Boolean expressions (`·`, `^`, `+`, `'`, parentheses)
 - Vertical input rails per variable with animated pen-style drawing
 - Horizontal wire taps and jumper arcs at rail crossings
 - AND / OR / XOR / NOT gate symbols from lines and arcs
@@ -25,13 +25,15 @@ npm run dev
 
 Inputs are **A–Y**; **Z** is reserved for the circuit output terminal.
 
-| Operation | Symbols |
-|-----------|---------|
-| AND | `·` (middle dot), `*`, `&`, `.`; also juxtaposition (`AB` = `A·B`) |
-| OR | `+`, `\|`; keyword `OR` |
-| XOR | `^`; keyword `XOR` |
-| NOT | postfix `'` (e.g. `C'`); keyword `NOT` |
+| Operation | Symbol |
+|-----------|--------|
+| AND | `·` (middle dot); also juxtaposition (`AB` = `A·B`) |
+| OR | `+` |
+| XOR | `^` |
+| NOT | postfix `'` (e.g. `C'`) |
 
 Precedence (low → high): **OR**, **XOR**, **AND**, **NOT**. Parentheses override precedence.
 
 Example: `S'·A+S·B` (2:1 multiplexer)
+
+Full syntax details (including optional parser aliases): [expression-syntax.md](./docs/expression-syntax.md).

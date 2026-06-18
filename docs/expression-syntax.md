@@ -2,39 +2,16 @@
 
 ## Operators
 
-| Operation | Symbols | Precedence |
-|-----------|---------|------------|
-| NOT | `'` (postfix), `!` (prefix), `NOT` | Highest |
-| AND | `·` (middle dot), or adjacent operands (`AB`) | Middle |
-| OR | `+`, `\|`, `OR` | Lowest |
+Use these symbols in expressions (matches the hint in the app UI):
 
-`*` and `&` are also accepted as aliases for AND.
+| Operation | Symbol | Precedence |
+|-----------|--------|------------|
+| NOT | postfix `'` (e.g. `C'`) | Highest |
+| AND | `·` (middle dot) | |
+| XOR | `^` | |
+| OR | `+` | Lowest |
 
 Parentheses `(` `)` override precedence.
-
-## Normalization
-
-Before parsing, the input is normalized:
-
-- Whitespace removed
-- `·` → internal AND token
-- `&` → AND
-- `|` → `+`
-- `NOT` → `!`
-- `AND` → AND
-- `OR` → `+`
-
-## NOT forms
-
-Both prefix and postfix NOT are supported:
-
-| Written | Meaning |
-|---------|---------|
-| `C'` | NOT C |
-| `!C` | NOT C |
-| `S'·A` | (NOT S) AND A |
-
-Postfix `'` is the primary style (matches classic Boolean notation).
 
 ## Implicit AND
 
@@ -46,6 +23,17 @@ Operands next to each other without an operator are ANDed:
 | `A·B` | A AND B |
 | `A'B` | (NOT A) AND B |
 
+## NOT
+
+Postfix `'` is the primary style (classic Boolean notation):
+
+| Written | Meaning |
+|---------|---------|
+| `C'` | NOT C |
+| `S'·A` | (NOT S) AND A |
+
+The keyword `NOT` is also accepted as a prefix operator (e.g. `NOT C`).
+
 ## Examples
 
 | Expression | Description |
@@ -54,8 +42,22 @@ Operands next to each other without an operator are ANDed:
 | `A·B+C'` | (A AND B) OR (NOT C) |
 | `(A·B)+(C'·D)` | Two product terms ORed |
 | `S'·A+S·B` | 2:1 multiplexer: if S=0 pick A, if S=1 pick B |
-| `A·B'+A'·B` | XOR |
+| `A^B` | A XOR B |
+| `A·B'+A'·B` | XOR (expanded) |
 | `A+B·C` | A OR (B AND C) — AND binds tighter than OR |
+
+## Parser aliases
+
+The lexer also accepts these alternatives, but **`·`, `+`, `^`, and `'` are the documented style**:
+
+| Operation | Also accepted |
+|-----------|----------------|
+| AND | `*`, `&`, `.`, keyword `AND`, juxtaposition |
+| OR | `\|`, keyword `OR` |
+| XOR | keyword `XOR` |
+| NOT | keyword `NOT` |
+
+`!` is **not** supported.
 
 ## Parse errors
 
@@ -64,14 +66,16 @@ The parser throws `ParseError` for:
 - Empty input
 - Unexpected tokens
 - Missing closing parenthesis
-- Invalid characters
+- Invalid characters (including `!`)
+- Using `Z` as an input variable
 
 Errors are shown below the expression input field.
 
 ## Variables
 
-- Single letters `A`–`Z` (case-insensitive, stored uppercase)
-- Multi-character names supported if alphanumeric (e.g. `IN1`) — uncommon for Boolean homework style
+- Single letters **A–Y** (case-insensitive, stored uppercase)
+- **`Z` is reserved** for the circuit output — not an input rail
+- Multi-character alphanumeric names are supported (e.g. `IN1`) but uncommon
 
 Variables are sorted alphabetically for rail column order and truth table columns.
 
