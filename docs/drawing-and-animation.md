@@ -42,19 +42,22 @@ All gates are built from lines, polylines, and arcs — no images or fonts for s
 
 ### NOT
 
-- Triangle (polyline): left edge → apex → left edge
-- Small circle (full arc) on the output for inversion bubble
+- Triangle + inversion bubble
+- One input pin (left center), one output pin (after bubble)
 
 ### AND
 
-- Vertical line on the left (flat back)
-- Semicircle on the right (curved front) — D-shape
-- Short horizontals closing top and bottom
+- D-shape body; input pins at ⅓ and ⅔ height on the left; output pin at arc tip
 
 ### OR
 
-- Curved back (arc)
-- Pointed front (polyline: top → tip → bottom)
+- Three cubic Bézier curves sampled into line-strip vertices (`src/lib/bezier.ts`):
+
+- **Back** — concave `)` from top-left to bottom-left (control points bulge right)
+- **Top** — top-left to output tip
+- **Bottom** — bottom-left to output tip
+
+Input pins at ⅓ and ⅔ on the left body edge; output pin from the tip. No circles or arc primitives on the OR body.
 
 ## CRT visual theme
 

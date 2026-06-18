@@ -9,6 +9,14 @@ export const COLORS = {
   phosphorDim: '#1a8f0a',
   phosphorGlow: 'rgba(57, 255, 20, 0.35)',
   label: '#5dff4a',
+  /** Gate body + pins (debug contrast vs green wires) */
+  gate: '#ff4444',
+  gateGlow: 'rgba(255, 68, 68, 0.4)',
+};
+
+/** Temporary inspection toggles — flip gatesOnly off to restore full circuit */
+export const DEBUG = {
+  gatesOnly: false,
 };
 
 export const LAYOUT = {
@@ -23,7 +31,7 @@ export const LAYOUT = {
   rowStep: 56,
   wireStub: 18,
   /** Gap before gate input where wire turns vertical then enters horizontally */
-  gateWireStub: 25,
+  gateWireStub: 20,
   /** Horizontal gap between the rightmost rail and the first gate column */
   railToGateGap: 50,
   jumperRadius: 10,

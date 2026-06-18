@@ -11,12 +11,13 @@ export function drawStroke(
   stroke: Stroke,
   progress: number,
 ): void {
-  ctx.strokeStyle = COLORS.phosphor;
-  ctx.fillStyle = COLORS.phosphor;
+  const isGate = stroke.phase === 'gate';
+  ctx.strokeStyle = isGate ? COLORS.gate : COLORS.phosphor;
+  ctx.fillStyle = isGate ? COLORS.gate : COLORS.phosphor;
   ctx.lineWidth = 1.5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.shadowColor = COLORS.phosphorGlow;
+  ctx.shadowColor = isGate ? COLORS.gateGlow : COLORS.phosphorGlow;
   ctx.shadowBlur = 4;
 
   const t = Math.min(1, Math.max(0, progress));

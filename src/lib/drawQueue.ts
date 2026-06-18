@@ -1,5 +1,8 @@
 import type { CircuitLayout, Point } from './types';
-import { LAYOUT } from './types';
+import type { GateLayout } from './types';
+import { DEBUG, LAYOUT } from './types';
+import { orGateBezierCurves } from './bezier';
+import { buildGatePins, inputPinStrokes } from './gateGeometry';
 
 export type StrokeKind = 'line' | 'arc' | 'polyline' | 'text';
 
@@ -41,33 +44,52 @@ export function arcLength(r: number, start: number, end: number): number {
   return r * Math.abs(end - start);
 }
 
-function gateStrokes(
-  type: 'NOT' | 'AND' | 'OR',
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-): Stroke[] {
+function addLineStroke(
+  strokes: Stroke[],
+  a: Point,
+  b: Point,
+  dur: number,
+): void {
+  strokes.push({
+    id: sid(),
+    kind: 'line',
+    phase: 'gate',
+    points: [a, b],
+    durationMs: dur,
+  });
+}
+
+function gateStrokes(gate: GateLayout): Stroke[] {
   const strokes: Stroke[] = [];
   const dur = 280;
+  const pinDur = dur * 0.25;
+  const centerY = gate.type === 'NOT' ? gate.outputY : undefined;
+  const pins = buildGatePins(gate.type, gate.x, gate.y, centerY);
+  const { body } = pins;
 
-  switch (type) {
+  for (const { outer, inner } of inputPinStrokes(pins)) {
+    addLineStroke(strokes, outer, inner, pinDur);
+  }
+
+  switch (gate.type) {
     case 'NOT': {
+      const w = body.w;
+      const h = body.h;
       const triW = w - 8;
       strokes.push({
         id: sid(),
         kind: 'polyline',
         phase: 'gate',
         points: [
-          { x, y },
-          { x: x + triW, y: y + h / 2 },
-          { x, y: y + h },
-          { x, y },
+          { x: body.x, y: body.y },
+          { x: body.x + triW, y: body.y + h / 2 },
+          { x: body.x, y: body.y + h },
+          { x: body.x, y: body.y },
         ],
         durationMs: dur,
       });
-      const bx = x + triW + 4;
-      const by = y + h / 2;
+      const bx = body.x + triW + 4;
+      const by = body.y + h / 2;
       strokes.push({
         id: sid(),
         kind: 'arc',
@@ -76,14 +98,15 @@ function gateStrokes(
         arc: { cx: bx, cy: by, r: 5, start: 0, end: Math.PI * 2 },
         durationMs: 200,
       });
+      addLineStroke(strokes, pins.outputInner, pins.outputOuter, pinDur);
       break;
     }
     case 'AND': {
-      const left = x;
-      const top = y;
-      const bottom = y + h;
-      const midY = y + h / 2;
-      const arcR = h / 2;
+      const left = body.x;
+      const top = body.y;
+      const bottom = body.y + body.h;
+      const midY = body.y + body.h / 2;
+      const arcR = body.h / 2;
       const arcCx = left + arcR;
       strokes.push({
         id: sid(),
@@ -129,39 +152,34 @@ function gateStrokes(
         },
         durationMs: dur * 0.6,
       });
+      addLineStroke(strokes, pins.outputInner, pins.outputOuter, pinDur);
       break;
     }
     case 'OR': {
-      const left = x;
-      const top = y;
-      const bottom = y + h;
-      const right = x + w;
-      const midY = y + h / 2;
+      const curves = orGateBezierCurves(body.x, body.y, body.w, body.h);
+      const curveDur = dur * 0.85;
       strokes.push({
         id: sid(),
         kind: 'polyline',
         phase: 'gate',
-        points: [
-          { x: left + 8, y: top },
-          { x: right, y: midY },
-          { x: left + 8, y: bottom },
-        ],
-        durationMs: dur,
+        points: curves.back,
+        durationMs: curveDur,
       });
       strokes.push({
         id: sid(),
-        kind: 'arc',
+        kind: 'polyline',
         phase: 'gate',
-        points: [],
-        arc: {
-          cx: left + 14,
-          cy: midY,
-          r: h / 2 - 2,
-          start: Math.PI / 2,
-          end: -Math.PI / 2,
-        },
-        durationMs: dur * 0.7,
+        points: curves.top,
+        durationMs: curveDur,
       });
+      strokes.push({
+        id: sid(),
+        kind: 'polyline',
+        phase: 'gate',
+        points: curves.bottom,
+        durationMs: curveDur,
+      });
+      addLineStroke(strokes, pins.outputInner, pins.outputOuter, pinDur);
       break;
     }
   }
@@ -259,6 +277,13 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
   strokeId = 0;
   const strokes: Stroke[] = [];
 
+  if (DEBUG.gatesOnly) {
+    for (const gate of layout.gates) {
+      strokes.push(...gateStrokes(gate));
+    }
+    return strokes;
+  }
+
   for (const label of layout.labels) {
     strokes.push({
       id: sid(),
@@ -291,9 +316,7 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
   }
 
   for (const gate of layout.gates) {
-    const w = gate.type === 'NOT' ? LAYOUT.notWidth : LAYOUT.gateWidth;
-    const h = gate.type === 'NOT' ? LAYOUT.notHeight : LAYOUT.gateHeight;
-    strokes.push(...gateStrokes(gate.type, gate.x, gate.y, w, h));
+    strokes.push(...gateStrokes(gate));
   }
 
   strokes.push({

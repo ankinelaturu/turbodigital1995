@@ -11,6 +11,7 @@ import type {
   WireSegmentLayout,
 } from './types';
 import { LAYOUT } from './types';
+import { buildGatePins } from './gateGeometry';
 
 interface NodeResult {
   point: Point;
@@ -35,18 +36,8 @@ function railX(varIndex: number): number {
   return LAYOUT.marginX + varIndex * LAYOUT.railSpacing;
 }
 
-function gateInputX(gateZoneStartX: number, depth: number): number {
+function gateColumnX(gateZoneStartX: number, depth: number): number {
   return gateZoneStartX + (depth - 1) * LAYOUT.layerSpacing;
-}
-
-function gateOutputX(depth: number, type: GateType, gateZoneStartX: number): number {
-  const inputX = gateInputX(gateZoneStartX, depth);
-  if (type === 'AND') {
-    return inputX + LAYOUT.gateHeight;
-  }
-  const tail = type === 'NOT' ? 4 : 8;
-  const width = type === 'NOT' ? LAYOUT.notWidth : LAYOUT.gateWidth;
-  return inputX + width + tail;
 }
 
 function collectRailJumpers(
@@ -70,16 +61,16 @@ function collectRailJumpers(
   return jumpers;
 }
 
-/** Horizontal → vertical → horizontal into gate input (orthogonal routing) */
+/** Horizontal → vertical → horizontal to input pin outer endpoint */
 function makeOrthogonalWireToGate(
   from: Point,
-  gateInputX: number,
-  gateInputY: number,
+  pinOuterX: number,
+  pinOuterY: number,
   railColumns: Map<string, number>,
   sourceVar?: string,
 ): WireLayout {
   const stub = LAYOUT.gateWireStub;
-  const stubX = gateInputX - stub;
+  const stubX = pinOuterX - stub;
   const segments: WireSegmentLayout[] = [];
 
   if (Math.abs(from.x - stubX) > 0.5) {
@@ -92,21 +83,21 @@ function makeOrthogonalWireToGate(
     });
   }
 
-  if (Math.abs(from.y - gateInputY) > 0.5) {
+  if (Math.abs(from.y - pinOuterY) > 0.5) {
     segments.push({
       points: [
         { x: stubX, y: from.y },
-        { x: stubX, y: gateInputY },
+        { x: stubX, y: pinOuterY },
       ],
       jumpers: [],
     });
   }
 
-  if (Math.abs(stubX - gateInputX) > 0.5) {
+  if (Math.abs(stubX - pinOuterX) > 0.5) {
     segments.push({
       points: [
-        { x: stubX, y: gateInputY },
-        { x: gateInputX, y: gateInputY },
+        { x: stubX, y: pinOuterY },
+        { x: pinOuterX, y: pinOuterY },
       ],
       jumpers: [],
     });
@@ -132,15 +123,16 @@ function layoutNode(
     case 'not': {
       const child = layoutNode(ast.child, railColumns, gateZoneStartX, yCursor);
       const depth = child.depth + 1;
-      const inputX = gateInputX(gateZoneStartX, depth);
+      const bodyX = gateColumnX(gateZoneStartX, depth);
       const gateY = child.point.y;
+      const pins = buildGatePins('NOT', bodyX, 0, gateY);
       const wires = [...child.wires];
 
       wires.push(
         makeOrthogonalWireToGate(
           child.point,
-          inputX,
-          gateY,
+          pins.inputOuter[0].x,
+          pins.inputOuter[0].y,
           railColumns,
           ast.child.type === 'var' ? ast.child.name : undefined,
         ),
@@ -149,15 +141,15 @@ function layoutNode(
       const gate: GateLayout = {
         id: nextGateId(),
         type: 'NOT',
-        x: inputX,
-        y: gateY - LAYOUT.notHeight / 2,
-        inputYs: [gateY],
-        outputX: gateOutputX(depth, 'NOT', gateZoneStartX),
-        outputY: gateY,
+        x: pins.body.x,
+        y: pins.body.y,
+        inputYs: pins.inputOuter.map((p) => p.y),
+        outputX: pins.outputOuter.x,
+        outputY: pins.outputOuter.y,
       };
 
       return {
-        point: { x: gate.outputX, y: gateY },
+        point: pins.outputOuter,
         gates: [...child.gates, gate],
         wires,
         depth,
@@ -169,12 +161,11 @@ function layoutNode(
       const right = layoutNode(ast.right, railColumns, gateZoneStartX, yCursor);
 
       const depth = Math.max(left.depth, right.depth) + 1;
-      const inputX = gateInputX(gateZoneStartX, depth);
+      const bodyX = gateColumnX(gateZoneStartX, depth);
       const gateY = (left.point.y + right.point.y) / 2;
       const gateTop = gateY - LAYOUT.gateHeight / 2;
-      const h = LAYOUT.gateHeight;
-      const inputUpperY = gateTop + h / 3 - 2;
-      const inputLowerY = gateTop + (2 * h) / 3 + 2;
+      const gateType: GateType = ast.type === 'and' ? 'AND' : 'OR';
+      const pins = buildGatePins(gateType, bodyX, gateTop);
 
       const wires = [...left.wires, ...right.wires];
 
@@ -187,25 +178,36 @@ function layoutNode(
       const lowerVar = left.point.y <= right.point.y ? rightVar : leftVar;
 
       wires.push(
-        makeOrthogonalWireToGate(upperFrom, inputX, inputUpperY, railColumns, upperVar),
+        makeOrthogonalWireToGate(
+          upperFrom,
+          pins.inputOuter[0].x,
+          pins.inputOuter[0].y,
+          railColumns,
+          upperVar,
+        ),
       );
       wires.push(
-        makeOrthogonalWireToGate(lowerFrom, inputX, inputLowerY, railColumns, lowerVar),
+        makeOrthogonalWireToGate(
+          lowerFrom,
+          pins.inputOuter[1].x,
+          pins.inputOuter[1].y,
+          railColumns,
+          lowerVar,
+        ),
       );
 
-      const gateType: GateType = ast.type === 'and' ? 'AND' : 'OR';
       const gate: GateLayout = {
         id: nextGateId(),
         type: gateType,
-        x: inputX,
-        y: gateTop,
-        inputYs: [inputUpperY, inputLowerY],
-        outputX: gateOutputX(depth, gateType, gateZoneStartX),
-        outputY: gateY,
+        x: pins.body.x,
+        y: pins.body.y,
+        inputYs: pins.inputOuter.map((p) => p.y),
+        outputX: pins.outputOuter.x,
+        outputY: pins.outputOuter.y,
       };
 
       return {
-        point: { x: gate.outputX, y: gateY },
+        point: pins.outputOuter,
         gates: [...left.gates, ...right.gates, gate],
         wires,
         depth,

@@ -31,6 +31,14 @@ A     B     S
 
 Variables are sorted alphabetically for column assignment.
 
+## Gate pins
+
+Each gate type defines shared geometry in `src/lib/gateGeometry.ts`:
+
+- **Input pins** — short horizontal leads (`GATE_PIN_LENGTH` = 10px) from the body left edge outward; external wires connect to the **outer** end
+- **Output pin** — short lead from the body tip/nose to the **outer** end where the next wire starts
+- Layout and drawing both use `buildGatePins()` so wires meet the symbol cleanly
+
 ## Gate placement
 
 Gates are placed in a **gate zone** to the right of every rail column — never overlapping the vertical rails.
