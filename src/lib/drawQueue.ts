@@ -3,7 +3,7 @@ import { DEBUG, DRAW_SPEED, LAYOUT, OUTPUT_NAME } from './types';
 import { orGateBezierCurves, xorGateBezierCurves } from './bezier';
 import { buildGatePins, inputPinStrokes } from './gateGeometry';
 
-export type StrokeKind = 'line' | 'arc' | 'polyline' | 'text';
+export type StrokeKind = 'line' | 'arc' | 'polyline' | 'text' | 'dot';
 
 export interface Stroke {
   id: string;
@@ -20,6 +20,7 @@ export interface Stroke {
     ccw?: boolean;
   };
   text?: string;
+  dotR?: number;
   durationMs: number;
 }
 
@@ -230,13 +231,35 @@ function gateStrokes(gate: GateLayout): Stroke[] {
   return strokes;
 }
 
+function addRailJunctionDot(
+  strokes: Stroke[],
+  pt: Point,
+  railXs: Set<number>,
+  dotted: Set<string>,
+): void {
+  if (!railXs.has(pt.x)) return;
+  const key = `${pt.x},${pt.y}`;
+  if (dotted.has(key)) return;
+  dotted.add(key);
+  strokes.push({
+    id: sid(),
+    kind: 'dot',
+    phase: 'wire',
+    points: [pt],
+    dotR: LAYOUT.railDotRadius,
+    durationMs: animMs(100),
+  });
+}
+
 function wireSegmentStrokes(
   a: Point,
   b: Point,
   jumpers: { railX: number; y: number }[],
+  railXs: Set<number>,
+  dotted: Set<string>,
 ): Stroke[] {
   if (Math.abs(a.y - b.y) < 0.5) {
-    return wireStrokesWithJumpers(a, b, jumpers);
+    return wireStrokesWithJumpers(a, b, jumpers, railXs, dotted);
   }
   const len = Math.abs(b.y - a.y);
   return [
@@ -254,6 +277,8 @@ function wireStrokesWithJumpers(
   a: Point,
   b: Point,
   jumpers: { railX: number; y: number }[],
+  railXs: Set<number>,
+  dotted: Set<string>,
 ): Stroke[] {
   const strokes: Stroke[] = [];
   const y = a.y;
@@ -282,6 +307,8 @@ function wireStrokesWithJumpers(
       ],
       durationMs: animMs(200 + Math.abs(x2 - x1) * 1.2),
     });
+    addRailJunctionDot(strokes, { x: x1, y }, railXs, dotted);
+    addRailJunctionDot(strokes, { x: x2, y }, railXs, dotted);
   };
 
   const addJumper = (railX: number) => {
@@ -318,11 +345,15 @@ function wireStrokesWithJumpers(
   return strokes;
 }
 
-function strokesForWire(wire: WireLayout): Stroke[] {
+function strokesForWire(
+  wire: WireLayout,
+  railXs: Set<number>,
+  dotted: Set<string>,
+): Stroke[] {
   const strokes: Stroke[] = [];
   for (const seg of wire.segments) {
     const [a, b] = seg.points;
-    strokes.push(...wireSegmentStrokes(a, b, seg.jumpers));
+    strokes.push(...wireSegmentStrokes(a, b, seg.jumpers, railXs, dotted));
   }
   return strokes;
 }
@@ -364,11 +395,13 @@ export function buildDrawQueue(layout: CircuitLayout): Stroke[] {
 
   const gateById = new Map(layout.gates.map((g) => [g.id, g]));
   const wireById = new Map(layout.wires.map((w) => [w.id, w]));
+  const railXs = new Set(layout.rails.map((r) => r.x));
+  const railDots = new Set<string>();
 
   for (const step of layout.drawSteps) {
     if (step.type === 'wire') {
       const wire = wireById.get(step.id);
-      if (wire) strokes.push(...strokesForWire(wire));
+      if (wire) strokes.push(...strokesForWire(wire, railXs, railDots));
     } else {
       const gate = gateById.get(step.id);
       if (gate) strokes.push(...gateStrokes(gate));

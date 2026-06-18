@@ -43,6 +43,8 @@ export const LAYOUT = {
   /** Horizontal gap between the rightmost rail and the first gate column */
   railToGateGap: 50,
   jumperRadius: 5,
+  /** Filled dot where a horizontal wire meets a rail */
+  railDotRadius: 4,
   labelOffsetY: -28,
   railTop: 50,
 };

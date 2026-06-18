@@ -68,6 +68,15 @@ export function drawStroke(
       ctx.fillText(stroke.text ?? '', p.x, p.y);
       break;
     }
+    case 'dot': {
+      const p = stroke.points[0];
+      const r = (stroke.dotR ?? 2) * t;
+      if (r < 0.1) return;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
   }
 }
 
@@ -86,6 +95,7 @@ export function strokeTotalLength(stroke: Stroke): number {
     case 'arc':
       return stroke.arc ? arcLength(stroke.arc.r, stroke.arc.start, stroke.arc.end) : 0;
     case 'text':
+    case 'dot':
       return 1;
     default:
       return 1;
