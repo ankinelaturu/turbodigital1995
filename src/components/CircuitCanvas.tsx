@@ -137,8 +137,9 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
       const canvas = canvasRef.current;
       const container = containerRef.current;
       if (!canvas || !container) return;
-      const cw = container.clientWidth - 24;
-      const scale = Math.min(1, cw / layout.width);
+      const cw = container.clientWidth;
+      const ch = container.clientHeight;
+      const scale = Math.min(cw / layout.width, ch / layout.height);
       canvas.width = Math.floor(layout.width * scale);
       canvas.height = Math.floor(layout.height * scale);
       const ctx = canvas.getContext('2d');
@@ -276,6 +277,9 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
 
   const stageWidth = layout ? layout.width * displayScale : 0;
   const stageHeight = layout ? layout.height * displayScale : 0;
+  const lastSwitch = layout?.switches[layout.switches.length - 1];
+  const switchHintLeft = lastSwitch ? lastSwitch.x * displayScale + 26 : 0;
+  const switchHintTop = lastSwitch ? lastSwitch.y * displayScale : 0;
 
   return (
     <div className="circuit-canvas-wrap" ref={containerRef}>
@@ -332,16 +336,20 @@ export function CircuitCanvas({ layout, ast, drawKey, onGateHover }: CircuitCanv
                   </button>
                 );
               })}
+              {complete && lastSwitch && (
+                <p
+                  className="canvas-status-inline"
+                  style={{ left: switchHintLeft, top: switchHintTop }}
+                >
+                  {simAnimating ? 'Current flowing…' : 'Toggle inputs to simulate'}
+                </p>
+              )}
             </div>
           )}
         </div>
       )}
       {!layout && <canvas ref={canvasRef} className="circuit-canvas" />}
       {!layout && <p className="canvas-placeholder">Enter an expression and click Draw</p>}
-      {layout && complete && !simAnimating && (
-        <p className="canvas-status">Toggle inputs to simulate</p>
-      )}
-      {layout && simAnimating && <p className="canvas-status">Current flowing…</p>}
 
       <CursorTooltip open={gateHover !== null} x={gateHover?.x ?? 0} y={gateHover?.y ?? 0}>
         {gateHover && (

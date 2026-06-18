@@ -172,14 +172,14 @@ export function strokeTotalLength(stroke: Stroke): number {
 
 /** Vignette + scanlines applied after the circuit is drawn. */
 export function drawCRTOverlay(ctx: CanvasRenderingContext2D, w: number, h: number): void {
-  const grad = ctx.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.7);
+  const grad = ctx.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.6);
   grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.45)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.28)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
 
-  ctx.fillStyle = 'rgba(0, 20, 0, 0.08)';
-  for (let y = 0; y < h; y += 3) {
+  ctx.fillStyle = 'rgba(0, 20, 0, 0.04)';
+  for (let y = 0; y < h; y += 4) {
     ctx.fillRect(0, y, w, 1);
   }
 }
